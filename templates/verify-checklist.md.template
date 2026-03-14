@@ -1,0 +1,48 @@
+# Verification Checklist — Phase [N/TOTAL]
+
+## Layer 1: Gates
+
+- [ ] **EXIST**: All referenced files, functions, APIs verified to exist
+- [ ] **RELEVANCE**: All changes are within phase plan scope
+- [ ] **ROOT_CAUSE**: Fix addresses root cause, not symptom
+- [ ] **RECALL**: Can articulate original constraints and IRON LAWS
+- [ ] **MOMENTUM**: Making forward progress (write:read ratio reasonable)
+
+## Layer 2: Self-Assessment
+
+### BOUND Compliance
+- [ ] No DANGER ZONE behavior changed without approval
+- [ ] No NEVER DO rule violated
+- [ ] All IRON LAWS verified:
+  - [ ] [Iron Law 1]
+  - [ ] [Iron Law 2]
+  - [ ] [Iron Law 3]
+
+### Tests
+- [ ] All existing tests pass
+- [ ] New tests added for new behavior
+- [ ] Edge cases from MAP stage covered
+- [ ] Test command: `[command]` → Result: [PASS/FAIL]
+
+### Metrics
+- [ ] Core metric: [value] — [stable/improved/regressed]
+- [ ] No performance regression
+- [ ] No increase in error rates
+
+### Scope
+- [ ] Changes within planned scope
+- [ ] Out-of-scope changes documented: [none / list]
+- [ ] No unintended side effects
+
+## Layer 3: External Review
+
+- [ ] Required? [Yes/No — based on complexity and BOUND interaction]
+- [ ] If yes: user approval obtained
+
+## Verdict
+
+- [ ] **PASS** — advance to next phase
+- [ ] **RETRY** — fix identified issue, re-verify
+- [ ] **FAIL** — escalate to user
+
+**Notes:** [any observations for the discovery log]

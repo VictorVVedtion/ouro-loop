@@ -1,0 +1,60 @@
+# Project: [PROJECT_NAME]
+
+## Overview
+
+[Brief project description — what it does, who uses it, what matters most.]
+
+## BOUND
+
+### DANGER ZONES
+
+[Modules where incorrect changes have severe consequences.]
+
+- `path/to/critical/module` — [why it's dangerous]
+- `path/to/another/module` — [why it's dangerous]
+
+### NEVER DO
+
+[Absolute prohibitions. These are hard stops, not guidelines.]
+
+- Never [action] without [safeguard]
+- Never [action] — [reason]
+- Never [action] even in [tempting situation]
+
+### IRON LAWS
+
+[Invariants that must always hold. These should be verifiable.]
+
+- [Invariant 1 — concrete, testable]
+- [Invariant 2 — concrete, testable]
+- [Invariant 3 — concrete, testable]
+
+## Architecture
+
+[Key architectural decisions and patterns used in this project.]
+
+## Development Workflow
+
+[How to build, test, and deploy this project.]
+
+### Build
+
+```bash
+[build command]
+```
+
+### Test
+
+```bash
+[test command]
+```
+
+### Deploy
+
+```bash
+[deploy command]
+```
+
+## Conventions
+
+[Coding conventions, naming patterns, file organization rules.]

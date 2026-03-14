@@ -1,4 +1,4 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
@@ -9,15 +9,26 @@ wheels/
 # Virtual environments
 .venv
 worktrees/
-results/
-queue/
 
-# Agent prompt files (generated per-session by launchers)
+# Ralph runtime state (per-project, not committed)
+.ralph/
+ralph-results.tsv
+
+# Agent prompt files (generated per-session)
 CLAUDE.md
 AGENTS.md
 
-# Experimental code/artifacts
+# Experimental artifacts
 dev/
+results/
+queue/
 
-# Results file
-results.tsv
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

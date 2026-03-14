@@ -1,389 +1,348 @@
 """
-One-time data preparation for autoresearch experiments.
-Downloads data shards and trains a BPE tokenizer.
+Project initialization and scanning for Ouro Loop.
+Scans project structure, generates initial state, installs templates.
 
 Usage:
-    python prepare.py                  # full prep (download + tokenizer)
-    python prepare.py --num-shards 8   # download only 8 shards (for testing)
+    python prepare.py scan [path]           # Scan project structure
+    python prepare.py init [path]           # Initialize .ouro/ directory
+    python prepare.py template <type> [path] # Copy template to project
 
-Data and tokenizer are stored in ~/.cache/autoresearch/.
+This file is read-only in the Ouro Loop methodology.
+The AI agent does not modify this file.
 """
 
 import os
 import sys
-import time
-import math
+import json
+import shutil
 import argparse
-import pickle
-from multiprocessing import Pool
-
-import requests
-import pyarrow.parquet as pq
-import rustbpe
-import tiktoken
-import torch
+from datetime import datetime, timezone
+from pathlib import Path
+from collections import Counter
 
 # ---------------------------------------------------------------------------
-# Constants (fixed, do not modify)
+# Constants
 # ---------------------------------------------------------------------------
 
-MAX_SEQ_LEN = 2048       # context length
-TIME_BUDGET = 300        # training time budget in seconds (5 minutes)
-EVAL_TOKENS = 40 * 524288  # number of tokens for val eval
+RALPH_DIR = ".ouro"
+STATE_FILE = "state.json"
+RESULTS_FILE = "ouro-results.tsv"
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules")
+
+# File extensions to language mapping
+LANG_MAP = {
+    ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
+    ".tsx": "TypeScript (React)", ".jsx": "JavaScript (React)",
+    ".rs": "Rust", ".go": "Go", ".java": "Java", ".kt": "Kotlin",
+    ".swift": "Swift", ".rb": "Ruby", ".php": "PHP", ".c": "C",
+    ".cpp": "C++", ".h": "C/C++ Header", ".cs": "C#",
+    ".sol": "Solidity", ".move": "Move", ".vy": "Vyper",
+    ".sql": "SQL", ".sh": "Shell", ".md": "Markdown",
+    ".yml": "YAML", ".yaml": "YAML", ".toml": "TOML",
+    ".json": "JSON", ".html": "HTML", ".css": "CSS",
+    ".scss": "SCSS", ".svelte": "Svelte", ".vue": "Vue",
+}
+
+# Directories to skip during scanning
+SKIP_DIRS = {
+    ".git", ".ouro", "node_modules", "__pycache__", ".venv",
+    "venv", ".next", "build", "dist", "target", ".idea", ".vscode",
+    "vendor", "Pods", ".build", "DerivedData", ".cache",
+}
+
+# Marker files that indicate project type
+PROJECT_MARKERS = {
+    "Cargo.toml": "Rust",
+    "go.mod": "Go",
+    "package.json": "Node.js",
+    "pyproject.toml": "Python",
+    "setup.py": "Python",
+    "Gemfile": "Ruby",
+    "pom.xml": "Java (Maven)",
+    "build.gradle": "Java/Kotlin (Gradle)",
+    "Package.swift": "Swift",
+    "Podfile": "iOS",
+    "hardhat.config.js": "Solidity (Hardhat)",
+    "foundry.toml": "Solidity (Foundry)",
+    "docker-compose.yml": "Docker",
+    "Dockerfile": "Docker",
+    "Makefile": "Make",
+}
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Scan
 # ---------------------------------------------------------------------------
 
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "autoresearch")
-DATA_DIR = os.path.join(CACHE_DIR, "data")
-TOKENIZER_DIR = os.path.join(CACHE_DIR, "tokenizer")
-BASE_URL = "https://huggingface.co/datasets/karpathy/climbmix-400b-shuffle/resolve/main"
-MAX_SHARD = 6542 # the last datashard is shard_06542.parquet
-VAL_SHARD = MAX_SHARD  # pinned validation shard (shard_06542)
-VAL_FILENAME = f"shard_{VAL_SHARD:05d}.parquet"
-VOCAB_SIZE = 8192
-
-# BPE split pattern (GPT-4 style, with \p{N}{1,2} instead of {1,3})
-SPLIT_PATTERN = r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,2}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"""
-
-SPECIAL_TOKENS = [f"<|reserved_{i}|>" for i in range(4)]
-BOS_TOKEN = "<|reserved_0|>"
-
-# ---------------------------------------------------------------------------
-# Data download
-# ---------------------------------------------------------------------------
-
-def download_single_shard(index):
-    """Download one parquet shard with retries. Returns True on success."""
-    filename = f"shard_{index:05d}.parquet"
-    filepath = os.path.join(DATA_DIR, filename)
-    if os.path.exists(filepath):
-        return True
-
-    url = f"{BASE_URL}/{filename}"
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            response = requests.get(url, stream=True, timeout=30)
-            response.raise_for_status()
-            temp_path = filepath + ".tmp"
-            with open(temp_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-            os.rename(temp_path, filepath)
-            print(f"  Downloaded {filename}")
-            return True
-        except (requests.RequestException, IOError) as e:
-            print(f"  Attempt {attempt}/{max_attempts} failed for {filename}: {e}")
-            for path in [filepath + ".tmp", filepath]:
-                if os.path.exists(path):
-                    try:
-                        os.remove(path)
-                    except OSError:
-                        pass
-            if attempt < max_attempts:
-                time.sleep(2 ** attempt)
-    return False
-
-
-def download_data(num_shards, download_workers=8):
-    """Download training shards + pinned validation shard."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-    num_train = min(num_shards, MAX_SHARD)
-    ids = list(range(num_train))
-    if VAL_SHARD not in ids:
-        ids.append(VAL_SHARD)
-
-    # Count what's already downloaded
-    existing = sum(1 for i in ids if os.path.exists(os.path.join(DATA_DIR, f"shard_{i:05d}.parquet")))
-    if existing == len(ids):
-        print(f"Data: all {len(ids)} shards already downloaded at {DATA_DIR}")
-        return
-
-    needed = len(ids) - existing
-    print(f"Data: downloading {needed} shards ({existing} already exist)...")
-
-    workers = max(1, min(download_workers, needed))
-    with Pool(processes=workers) as pool:
-        results = pool.map(download_single_shard, ids)
-
-    ok = sum(1 for r in results if r)
-    print(f"Data: {ok}/{len(ids)} shards ready at {DATA_DIR}")
-
-# ---------------------------------------------------------------------------
-# Tokenizer training
-# ---------------------------------------------------------------------------
-
-def list_parquet_files():
-    """Return sorted list of parquet file paths in the data directory."""
-    files = sorted(f for f in os.listdir(DATA_DIR) if f.endswith(".parquet") and not f.endswith(".tmp"))
-    return [os.path.join(DATA_DIR, f) for f in files]
-
-
-def text_iterator(max_chars=1_000_000_000, doc_cap=10_000):
-    """Yield documents from training split (all shards except pinned val shard)."""
-    parquet_paths = [p for p in list_parquet_files() if not p.endswith(VAL_FILENAME)]
-    nchars = 0
-    for filepath in parquet_paths:
-        pf = pq.ParquetFile(filepath)
-        for rg_idx in range(pf.num_row_groups):
-            rg = pf.read_row_group(rg_idx)
-            for text in rg.column("text").to_pylist():
-                doc = text[:doc_cap] if len(text) > doc_cap else text
-                nchars += len(doc)
-                yield doc
-                if nchars >= max_chars:
-                    return
-
-
-def train_tokenizer():
-    """Train BPE tokenizer using rustbpe, save as tiktoken pickle."""
-    tokenizer_pkl = os.path.join(TOKENIZER_DIR, "tokenizer.pkl")
-    token_bytes_path = os.path.join(TOKENIZER_DIR, "token_bytes.pt")
-
-    if os.path.exists(tokenizer_pkl) and os.path.exists(token_bytes_path):
-        print(f"Tokenizer: already trained at {TOKENIZER_DIR}")
-        return
-
-    os.makedirs(TOKENIZER_DIR, exist_ok=True)
-
-    parquet_files = list_parquet_files()
-    if len(parquet_files) < 2:
-        print("Tokenizer: need at least 2 data shards (1 train + 1 val). Download more data first.")
+def scan_project(project_path: str) -> dict:
+    """Scan a project directory and return a structured summary."""
+    project_path = os.path.abspath(project_path)
+    if not os.path.isdir(project_path):
+        print(f"Error: {project_path} is not a directory")
         sys.exit(1)
 
-    # --- Train with rustbpe ---
-    print("Tokenizer: training BPE tokenizer...")
-    t0 = time.time()
+    result = {
+        "path": project_path,
+        "name": os.path.basename(project_path),
+        "scanned_at": datetime.now(timezone.utc).isoformat(),
+        "project_types": [],
+        "languages": Counter(),
+        "file_count": 0,
+        "dir_count": 0,
+        "total_lines": 0,
+        "top_directories": [],
+        "has_claude_md": False,
+        "has_tests": False,
+        "has_ci": False,
+        "bound_detected": False,
+        "danger_zones": [],
+    }
 
-    tokenizer = rustbpe.Tokenizer()
-    vocab_size_no_special = VOCAB_SIZE - len(SPECIAL_TOKENS)
-    tokenizer.train_from_iterator(text_iterator(), vocab_size_no_special, pattern=SPLIT_PATTERN)
+    # Detect project types
+    for marker, ptype in PROJECT_MARKERS.items():
+        if os.path.exists(os.path.join(project_path, marker)):
+            result["project_types"].append(ptype)
 
-    # Build tiktoken encoding from trained merges
-    pattern = tokenizer.get_pattern()
-    mergeable_ranks = {bytes(k): v for k, v in tokenizer.get_mergeable_ranks()}
-    tokens_offset = len(mergeable_ranks)
-    special_tokens = {name: tokens_offset + i for i, name in enumerate(SPECIAL_TOKENS)}
-    enc = tiktoken.Encoding(
-        name="rustbpe",
-        pat_str=pattern,
-        mergeable_ranks=mergeable_ranks,
-        special_tokens=special_tokens,
-    )
+    # Walk the project
+    for root, dirs, files in os.walk(project_path):
+        # Filter out skip directories
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        result["dir_count"] += len(dirs)
 
-    # Save tokenizer
-    with open(tokenizer_pkl, "wb") as f:
-        pickle.dump(enc, f)
+        rel_root = os.path.relpath(root, project_path)
 
-    t1 = time.time()
-    print(f"Tokenizer: trained in {t1 - t0:.1f}s, saved to {tokenizer_pkl}")
+        for fname in files:
+            filepath = os.path.join(root, fname)
+            result["file_count"] += 1
 
-    # --- Build token_bytes lookup for BPB evaluation ---
-    print("Tokenizer: building token_bytes lookup...")
-    special_set = set(SPECIAL_TOKENS)
-    token_bytes_list = []
-    for token_id in range(enc.n_vocab):
-        token_str = enc.decode([token_id])
-        if token_str in special_set:
-            token_bytes_list.append(0)
-        else:
-            token_bytes_list.append(len(token_str.encode("utf-8")))
-    token_bytes_tensor = torch.tensor(token_bytes_list, dtype=torch.int32)
-    torch.save(token_bytes_tensor, token_bytes_path)
-    print(f"Tokenizer: saved token_bytes to {token_bytes_path}")
+            # Language detection
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in LANG_MAP:
+                result["languages"][LANG_MAP[ext]] += 1
 
-    # Sanity check
-    test = "Hello world! Numbers: 123. Unicode: 你好"
-    encoded = enc.encode_ordinary(test)
-    decoded = enc.decode(encoded)
-    assert decoded == test, f"Tokenizer roundtrip failed: {test!r} -> {decoded!r}"
-    print(f"Tokenizer: sanity check passed (vocab_size={enc.n_vocab})")
+            # Count lines for code files
+            if ext in LANG_MAP:
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        result["total_lines"] += sum(1 for _ in f)
+                except (OSError, PermissionError):
+                    pass
+
+            # Special file detection
+            if fname == "CLAUDE.md":
+                result["has_claude_md"] = True
+                # Check for BOUND markers
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        if any(marker in content for marker in
+                               ["DANGER ZONE", "NEVER DO", "IRON LAW",
+                                "## BOUND", "# BOUND"]):
+                            result["bound_detected"] = True
+                except (OSError, PermissionError):
+                    pass
+
+            # Test detection
+            if "test" in fname.lower() or "spec" in fname.lower():
+                result["has_tests"] = True
+
+        # CI detection
+        if rel_root in [".github/workflows", ".circleci", ".gitlab-ci"]:
+            result["has_ci"] = True
+
+    # Top-level directories
+    try:
+        top_dirs = sorted([
+            d for d in os.listdir(project_path)
+            if os.path.isdir(os.path.join(project_path, d)) and d not in SKIP_DIRS
+        ])
+        result["top_directories"] = top_dirs
+    except OSError:
+        pass
+
+    # Convert Counter to dict for JSON serialization
+    result["languages"] = dict(result["languages"].most_common(10))
+
+    return result
+
+
+def print_scan_report(scan: dict):
+    """Print a human-readable scan report."""
+    print(f"{'=' * 60}")
+    print(f"  Ouro Loop — Project Scan")
+    print(f"{'=' * 60}")
+    print(f"  Project:    {scan['name']}")
+    print(f"  Path:       {scan['path']}")
+    print(f"  Types:      {', '.join(scan['project_types']) or 'Unknown'}")
+    print(f"  Files:      {scan['file_count']}")
+    print(f"  Dirs:       {scan['dir_count']}")
+    print(f"  Lines:      {scan['total_lines']:,}")
+    print()
+
+    if scan["languages"]:
+        print("  Languages:")
+        for lang, count in scan["languages"].items():
+            bar = "#" * min(count, 40)
+            print(f"    {lang:20s} {count:4d} files  {bar}")
+        print()
+
+    print(f"  CLAUDE.md:  {'Found' if scan['has_claude_md'] else 'Not found'}")
+    print(f"  BOUND:      {'Detected' if scan['bound_detected'] else 'Not defined'}")
+    print(f"  Tests:      {'Found' if scan['has_tests'] else 'Not found'}")
+    print(f"  CI:         {'Found' if scan['has_ci'] else 'Not found'}")
+    print()
+
+    if scan["top_directories"]:
+        print(f"  Structure:  {', '.join(scan['top_directories'][:10])}")
+        if len(scan["top_directories"]) > 10:
+            print(f"              ... and {len(scan['top_directories']) - 10} more")
+
+    print(f"{'=' * 60}")
+
+    # Recommendations
+    recommendations = []
+    if not scan["bound_detected"]:
+        recommendations.append("Define BOUND (DANGER ZONES, NEVER DO, IRON LAWS) before building")
+    if not scan["has_tests"]:
+        recommendations.append("Add tests — VERIFY stage requires testable assertions")
+    if not scan["has_claude_md"]:
+        recommendations.append("Create CLAUDE.md with BOUND section (use: python prepare.py template claude)")
+    if not scan["has_ci"]:
+        recommendations.append("Consider adding CI for automated Layer 2 verification")
+
+    if recommendations:
+        print()
+        print("  Recommendations:")
+        for i, rec in enumerate(recommendations, 1):
+            print(f"    {i}. {rec}")
+        print()
 
 # ---------------------------------------------------------------------------
-# Runtime utilities (imported by train.py)
+# Init
 # ---------------------------------------------------------------------------
 
-class Tokenizer:
-    """Minimal tokenizer wrapper. Training is handled above."""
+def init_ralph(project_path: str):
+    """Initialize .ouro/ directory with initial state."""
+    ralph_path = os.path.join(project_path, RALPH_DIR)
 
-    def __init__(self, enc):
-        self.enc = enc
-        self.bos_token_id = enc.encode_single_token(BOS_TOKEN)
+    if os.path.exists(os.path.join(ralph_path, STATE_FILE)):
+        print(f"Ouro already initialized at {ralph_path}")
+        print("Use 'python framework.py status' to view current state.")
+        return
 
-    @classmethod
-    def from_directory(cls, tokenizer_dir=TOKENIZER_DIR):
-        with open(os.path.join(tokenizer_dir, "tokenizer.pkl"), "rb") as f:
-            enc = pickle.load(f)
-        return cls(enc)
+    os.makedirs(ralph_path, exist_ok=True)
 
-    def get_vocab_size(self):
-        return self.enc.n_vocab
+    # Scan the project first
+    scan = scan_project(project_path)
 
-    def get_bos_token_id(self):
-        return self.bos_token_id
+    # Create initial state
+    state = {
+        "version": "0.1.0",
+        "initialized_at": datetime.now(timezone.utc).isoformat(),
+        "project_name": scan["name"],
+        "project_types": scan["project_types"],
+        "current_stage": "BOUND",
+        "current_phase": None,
+        "total_phases": 0,
+        "bound_defined": scan["bound_detected"],
+        "history": [],
+    }
 
-    def encode(self, text, prepend=None, num_threads=8):
-        if prepend is not None:
-            prepend_id = prepend if isinstance(prepend, int) else self.enc.encode_single_token(prepend)
-        if isinstance(text, str):
-            ids = self.enc.encode_ordinary(text)
-            if prepend is not None:
-                ids.insert(0, prepend_id)
-        elif isinstance(text, list):
-            ids = self.enc.encode_ordinary_batch(text, num_threads=num_threads)
-            if prepend is not None:
-                for row in ids:
-                    row.insert(0, prepend_id)
-        else:
-            raise ValueError(f"Invalid input type: {type(text)}")
-        return ids
+    state_path = os.path.join(ralph_path, STATE_FILE)
+    with open(state_path, "w") as f:
+        json.dump(state, f, indent=2)
 
-    def decode(self, ids):
-        return self.enc.decode(ids)
+    # Create results TSV header
+    results_path = os.path.join(project_path, RESULTS_FILE)
+    if not os.path.exists(results_path):
+        with open(results_path, "w") as f:
+            f.write("phase\tverdict\tbound_violations\ttest_pass_rate\tscope_deviation\tnotes\n")
 
+    print(f"Ouro initialized at {ralph_path}")
+    print(f"  State:   {state_path}")
+    print(f"  Results: {results_path}")
+    print()
 
-def get_token_bytes(device="cpu"):
-    path = os.path.join(TOKENIZER_DIR, "token_bytes.pt")
-    with open(path, "rb") as f:
-        return torch.load(f, map_location=device)
-
-
-def _document_batches(split, tokenizer_batch_size=128):
-    """Infinite iterator over document batches from parquet files."""
-    parquet_paths = list_parquet_files()
-    assert len(parquet_paths) > 0, "No parquet files found. Run prepare.py first."
-    val_path = os.path.join(DATA_DIR, VAL_FILENAME)
-    if split == "train":
-        parquet_paths = [p for p in parquet_paths if p != val_path]
-        assert len(parquet_paths) > 0, "No training shards found."
+    if not scan["bound_detected"]:
+        print("Next step: Define BOUND before starting BUILD.")
+        print("  Option 1: Add ## BOUND section to CLAUDE.md manually")
+        print("  Option 2: Run 'python prepare.py template claude' for a template")
     else:
-        parquet_paths = [val_path]
-    epoch = 1
-    while True:
-        for filepath in parquet_paths:
-            pf = pq.ParquetFile(filepath)
-            for rg_idx in range(pf.num_row_groups):
-                rg = pf.read_row_group(rg_idx)
-                batch = rg.column('text').to_pylist()
-                for i in range(0, len(batch), tokenizer_batch_size):
-                    yield batch[i:i+tokenizer_batch_size], epoch
-        epoch += 1
-
-
-def make_dataloader(tokenizer, B, T, split, buffer_size=1000):
-    """
-    BOS-aligned dataloader with best-fit packing.
-    Every row starts with BOS. Documents packed using best-fit to minimize cropping.
-    When no document fits remaining space, crops shortest doc to fill exactly.
-    100% utilization (no padding).
-    """
-    assert split in ["train", "val"]
-    row_capacity = T + 1
-    batches = _document_batches(split)
-    bos_token = tokenizer.get_bos_token_id()
-    doc_buffer = []
-    epoch = 1
-
-    def refill_buffer():
-        nonlocal epoch
-        doc_batch, epoch = next(batches)
-        token_lists = tokenizer.encode(doc_batch, prepend=bos_token)
-        doc_buffer.extend(token_lists)
-
-    # Pre-allocate buffers: [inputs (B*T) | targets (B*T)]
-    row_buffer = torch.empty((B, row_capacity), dtype=torch.long)
-    cpu_buffer = torch.empty(2 * B * T, dtype=torch.long, pin_memory=True)
-    gpu_buffer = torch.empty(2 * B * T, dtype=torch.long, device="cuda")
-    cpu_inputs = cpu_buffer[:B * T].view(B, T)
-    cpu_targets = cpu_buffer[B * T:].view(B, T)
-    inputs = gpu_buffer[:B * T].view(B, T)
-    targets = gpu_buffer[B * T:].view(B, T)
-
-    while True:
-        for row_idx in range(B):
-            pos = 0
-            while pos < row_capacity:
-                while len(doc_buffer) < buffer_size:
-                    refill_buffer()
-
-                remaining = row_capacity - pos
-
-                # Find largest doc that fits entirely
-                best_idx = -1
-                best_len = 0
-                for i, doc in enumerate(doc_buffer):
-                    doc_len = len(doc)
-                    if doc_len <= remaining and doc_len > best_len:
-                        best_idx = i
-                        best_len = doc_len
-
-                if best_idx >= 0:
-                    doc = doc_buffer.pop(best_idx)
-                    row_buffer[row_idx, pos:pos + len(doc)] = torch.tensor(doc, dtype=torch.long)
-                    pos += len(doc)
-                else:
-                    # No doc fits — crop shortest to fill remaining
-                    shortest_idx = min(range(len(doc_buffer)), key=lambda i: len(doc_buffer[i]))
-                    doc = doc_buffer.pop(shortest_idx)
-                    row_buffer[row_idx, pos:pos + remaining] = torch.tensor(doc[:remaining], dtype=torch.long)
-                    pos += remaining
-
-        cpu_inputs.copy_(row_buffer[:, :-1])
-        cpu_targets.copy_(row_buffer[:, 1:])
-        gpu_buffer.copy_(cpu_buffer, non_blocking=True)
-        yield inputs, targets, epoch
+        print("BOUND detected. Ready to start the Ouro Loop.")
 
 # ---------------------------------------------------------------------------
-# Evaluation (DO NOT CHANGE — this is the fixed metric)
+# Templates
 # ---------------------------------------------------------------------------
 
-@torch.no_grad()
-def evaluate_bpb(model, tokenizer, batch_size):
-    """
-    Bits per byte (BPB): vocab size-independent evaluation metric.
-    Sums per-token cross-entropy (in nats), sums target byte lengths,
-    then converts nats/byte to bits/byte. Special tokens (byte length 0)
-    are excluded from both sums.
-    Uses fixed MAX_SEQ_LEN so results are comparable across configs.
-    """
-    token_bytes = get_token_bytes(device="cuda")
-    val_loader = make_dataloader(tokenizer, batch_size, MAX_SEQ_LEN, "val")
-    steps = EVAL_TOKENS // (batch_size * MAX_SEQ_LEN)
-    total_nats = 0.0
-    total_bytes = 0
-    for _ in range(steps):
-        x, y, _ = next(val_loader)
-        loss_flat = model(x, y, reduction='none').view(-1)
-        y_flat = y.view(-1)
-        nbytes = token_bytes[y_flat]
-        mask = nbytes > 0
-        total_nats += (loss_flat * mask).sum().item()
-        total_bytes += nbytes.sum().item()
-    return total_nats / (math.log(2) * total_bytes)
+TEMPLATE_MAP = {
+    "claude": "CLAUDE.md.template",
+    "phase": "phase-plan.md.template",
+    "verify": "verify-checklist.md.template",
+}
+
+def install_template(template_type: str, project_path: str):
+    """Copy a template to the project directory."""
+    if template_type not in TEMPLATE_MAP:
+        print(f"Unknown template type: {template_type}")
+        print(f"Available: {', '.join(TEMPLATE_MAP.keys())}")
+        sys.exit(1)
+
+    template_name = TEMPLATE_MAP[template_type]
+    src = os.path.join(TEMPLATES_DIR, template_name)
+    if not os.path.exists(src):
+        print(f"Template not found: {src}")
+        sys.exit(1)
+
+    # Determine output filename (strip .template suffix)
+    out_name = template_name.replace(".template", "")
+    dst = os.path.join(project_path, out_name)
+
+    if os.path.exists(dst):
+        print(f"File already exists: {dst}")
+        print("Remove it first or merge manually.")
+        return
+
+    shutil.copy2(src, dst)
+    print(f"Template installed: {dst}")
+    print(f"  Edit this file to define your project's {template_type} configuration.")
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Prepare data and tokenizer for autoresearch")
-    parser.add_argument("--num-shards", type=int, default=10, help="Number of training shards to download (-1 = all). Val shard is always pinned.")
-    parser.add_argument("--download-workers", type=int, default=8, help="Number of parallel download workers")
+    parser = argparse.ArgumentParser(
+        description="Ouro Loop — Project initialization and scanning"
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # scan
+    scan_parser = subparsers.add_parser("scan", help="Scan project structure")
+    scan_parser.add_argument("path", nargs="?", default=".",
+                             help="Project directory to scan (default: current dir)")
+
+    # init
+    init_parser = subparsers.add_parser("init", help="Initialize .ouro/ directory")
+    init_parser.add_argument("path", nargs="?", default=".",
+                             help="Project directory (default: current dir)")
+
+    # template
+    tmpl_parser = subparsers.add_parser("template", help="Install a template")
+    tmpl_parser.add_argument("type", choices=TEMPLATE_MAP.keys(),
+                             help="Template type to install")
+    tmpl_parser.add_argument("path", nargs="?", default=".",
+                             help="Project directory (default: current dir)")
+
     args = parser.parse_args()
 
-    num_shards = MAX_SHARD if args.num_shards == -1 else args.num_shards
+    if args.command is None:
+        parser.print_help()
+        sys.exit(0)
 
-    print(f"Cache directory: {CACHE_DIR}")
-    print()
-
-    # Step 1: Download data
-    download_data(num_shards, download_workers=args.download_workers)
-    print()
-
-    # Step 2: Train tokenizer
-    train_tokenizer()
-    print()
-    print("Done! Ready to train.")
+    if args.command == "scan":
+        scan = scan_project(args.path)
+        print_scan_report(scan)
+    elif args.command == "init":
+        init_ralph(args.path)
+    elif args.command == "template":
+        install_template(args.type, args.path)

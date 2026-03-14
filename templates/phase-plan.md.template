@@ -1,0 +1,67 @@
+# Phase Plan: [TASK_NAME]
+
+## Meta
+
+- **Complexity**: [Trivial / Simple / Complex / Architectural]
+- **Total Phases**: [N]
+- **BOUND Interaction**: [None / Adjacent / Inside / Modifies]
+- **Estimated Effort**: [time estimate]
+
+## Task Summary
+
+[What we're building/fixing/refactoring and why.]
+
+## Core Metric
+
+[Single metric that indicates success. Be specific.]
+
+---
+
+## Phase 1: [Title] — [CRITICAL/HIGH/MEDIUM/LOW]
+
+**Entry criteria:**
+- [ ] BOUND defined and reviewed
+- [ ] Existing tests pass
+- [ ] [Phase-specific prerequisite]
+
+**Scope:**
+- `path/to/file1` — [what changes]
+- `path/to/file2` — [what changes]
+
+**Exit criteria:**
+- [ ] [Specific verifiable outcome]
+- [ ] [Tests that must pass]
+- [ ] IRON LAW compliance verified
+
+**Verification:**
+```bash
+[specific test/check commands]
+```
+
+---
+
+## Phase 2: [Title] — [CRITICAL/HIGH/MEDIUM/LOW]
+
+**Entry criteria:**
+- [ ] Phase 1 verified and passed
+
+**Scope:**
+- `path/to/file3` — [what changes]
+
+**Exit criteria:**
+- [ ] [Specific verifiable outcome]
+
+**Verification:**
+```bash
+[specific test/check commands]
+```
+
+---
+
+## Discovery Log
+
+[Record unexpected findings during execution that may affect later phases.]
+
+| Phase | Discovery | Impact | Action |
+|-------|-----------|--------|--------|
+| | | | |
