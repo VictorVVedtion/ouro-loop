@@ -1,6 +1,6 @@
 # Ouro Loop
 
-![Ouro Loop](assets/banner.png)
+![Ouro Loop — Autonomous AI Agent Development Framework](assets/banner.png)
 
 > **"To grant an entity absolute autonomy, you must first bind it with absolute constraints."**
 
@@ -8,13 +8,17 @@
 [![Python >=3.10](https://img.shields.io/badge/python->=3.10-blue.svg)](https://www.python.org/downloads/)
 [![Status: Experimental](https://img.shields.io/badge/status-experimental-orange.svg)]()
 
-In the era of "vibe coding," we are no longer just writing syntax; we are launching execution agents into deep space. However, unbound trajectory is dangerous. Unbound AI agents hallucinate, break production constraints, and regress established architectural patterns.
+**Ouro Loop** is an open-source framework for running **autonomous AI coding agents** with guardrails. It gives AI agents (Claude Code, Cursor, Aider, Codex, or any LLM-based coding assistant) a structured **long-running development workflow** with built-in verification, constraint enforcement, and **self-healing capabilities** — so you can let the agent run overnight and wake up to working code, not a broken codebase.
 
-**Ouro Loop** is a lightweight runtime and methodology that solves this. It maps Andrej Karpathy's `autoresearch` concept (autonomous AI experimentation) to general software engineering. 
+Inspired by Andrej Karpathy's [`autoresearch`](https://github.com/karpathy/autoresearch) (autonomous AI experimentation for ML research), Ouro Loop maps the same paradigm to **general software engineering**: define rigid boundaries, let the AI agent iterate autonomously within them, auto-revert on failure, and never stop.
 
-It formally introduces **The Event Horizon**: A process where the developer establishes the absolute center of gravity (Iron Laws, Danger Zones). The AI Agent is granted absolute autonomy to continuously build, verify, and infinitely self-correct (The Ouroboros) within that inescapable gravitational pull, never crossing the boundary into catastrophic failure.
+### The Problem with Unbound AI Agents
 
-The core idea: you're not programming Python files like you normally would. Instead, you are programming the `program.md` methodology instructions and the `CLAUDE.md` boundary definitions that provide context to the AI agent. The developer draws the magical circle (Iron Laws, Danger Zones). The AI Agent — The Serpent — is granted absolute autonomy to build, verify, and self-correct (Ouroboros) within that circle.
+In the era of "vibe coding," unbound AI agents hallucinate file paths, break production constraints, regress architectural patterns, and get stuck in infinite fix-break loops. The current solution — pausing to ask humans — negates the promise of autonomous coding.
+
+### The Solution: Bounded Autonomy
+
+Ouro Loop formally introduces **The Event Horizon**: the developer establishes absolute constraints (Iron Laws, Danger Zones). The AI Agent is granted full autonomy to continuously build, verify, and self-correct within that boundary — never crossing into catastrophic failure. When something breaks inside the boundary, the agent **doesn't ask for help** — it consults its remediation playbook, reverts, tries a different approach, and reports what it did.
 
 ---
 
@@ -229,6 +233,48 @@ examples/             real-world BOUND definitions from four project types
 | Core metric | val_bpb (lower is better) | Multi-layer verification (gates + self-assessment) |
 | On failure | Auto-revert, try next experiment | Auto-remediate, try alternative approach |
 | Read-only | `prepare.py` | `prepare.py` + `modules/` |
+
+## Use Cases
+
+Ouro Loop is designed for any scenario where you need an **AI agent to work autonomously for extended periods** without human babysitting:
+
+- **Overnight autonomous development** — Define BOUND, start the agent, sleep. Wake up to a log of phases completed and verified, not a broken codebase.
+- **Long-running refactoring** — Let the agent refactor a large codebase in phases, with verification gates ensuring nothing breaks between phases.
+- **AI-assisted code review and remediation** — The agent identifies issues, fixes them, and verifies the fixes — all within defined safety boundaries.
+- **Continuous integration with AI agents** — Plug Ouro Loop into your CI/CD pipeline to let agents handle build failures, test regressions, and dependency updates autonomously.
+- **Multi-phase feature development** — Break complex features into severity-ordered phases. The agent handles CRITICAL changes first, then HIGH, then MEDIUM.
+- **Production-safe AI coding** — For financial systems, blockchain infrastructure, medical software, and any domain where "move fast and break things" is unacceptable.
+
+## Works With
+
+Ouro Loop is agent-agnostic. It works with any AI coding assistant that can read files and execute terminal commands:
+
+- **[Claude Code](https://claude.ai/claude-code)** — Anthropic's CLI agent. Native `program.md` skill support.
+- **[Cursor](https://cursor.sh)** — AI-powered IDE. Use `.cursorrules` to reference Ouro Loop modules.
+- **[Aider](https://aider.chat)** — Terminal-based AI pair programmer.
+- **[Codex CLI](https://github.com/openai/codex)** — OpenAI's coding agent.
+- **[Windsurf](https://codeium.com/windsurf)** — Codeium's AI IDE.
+- Any agent that can read Markdown instructions and run Python scripts.
+
+## Related Projects
+
+- **[karpathy/autoresearch](https://github.com/karpathy/autoresearch)** — The inspiration. Autonomous ML experiment loop. Ouro Loop extends this paradigm to general software engineering.
+- **[anthropics/claude-code](https://claude.ai/claude-code)** — The AI agent Ouro Loop was primarily developed with.
+- **[everything-claude-code](https://github.com/anthropics/courses)** — Comprehensive Claude Code skills and agents collection.
+
+## FAQ
+
+**Q: How is this different from just using `.cursorrules` or `CLAUDE.md`?**
+A: Those define static instructions. Ouro Loop adds a **runtime loop** — state tracking, multi-layer verification, autonomous remediation, and phase management. The agent doesn't just follow rules; it verifies compliance, detects drift, and self-corrects.
+
+**Q: Can the agent really fix its own mistakes?**
+A: Yes, within BOUND. If verification fails and the issue is inside the boundary (not a DANGER ZONE), the agent consults `modules/remediation.md` for a decision playbook: revert, retry with a different approach, or escalate. It reports what it did, not what it's thinking of doing.
+
+**Q: How long can the agent run autonomously?**
+A: As long as phases remain. Each phase is independently verifiable, so the agent can run for hours across many phases. The NEVER STOP instruction in `program.md` keeps the loop going until all phases pass or an EMERGENCY-level issue is hit.
+
+**Q: Do I need to install anything?**
+A: No. Zero dependencies. Pure Python 3.10+ standard library. No pip install, no npm, no Docker.
 
 ## Contributing
 
