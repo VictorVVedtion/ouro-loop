@@ -15,7 +15,7 @@ STATE_DIR="${CWD}/.ouro"
 SCOPE_FILE="${STATE_DIR}/scope-files.txt"
 mkdir -p "$STATE_DIR" 2>/dev/null
 
-REL_PATH="${FILE_PATH#$CWD/}"
+REL_PATH="${FILE_PATH#"$CWD"/}"
 
 # Extract directory of the file (scope = directories, not individual files)
 FILE_DIR=$(dirname "$REL_PATH")

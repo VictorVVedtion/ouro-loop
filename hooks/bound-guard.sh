@@ -25,13 +25,13 @@ fi
 # Extract DANGER ZONES from CLAUDE.md
 # Looks for lines like: - `src/payments/` — description
 DANGER_ZONES=$(sed -n '/### DANGER ZONES/,/### /p' "$CLAUDE_MD" \
-  | sed -n 's/.*`\([^`]*\)`.*/\1/p' \
+  | sed -n "s/.*\`\\([^\`]*\\)\`.*/\\1/p" \
   | head -20)
 
 [ -z "$DANGER_ZONES" ] && exit 0
 
 # Make FILE_PATH relative to CWD for matching
-REL_PATH="${FILE_PATH#$CWD/}"
+REL_PATH="${FILE_PATH#"$CWD"/}"
 
 # Check if the file matches any DANGER ZONE
 while IFS= read -r zone; do

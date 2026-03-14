@@ -21,7 +21,7 @@ mkdir -p "$STATE_DIR" 2>/dev/null
 [ ! -f "$TRACKER" ] && echo '{}' > "$TRACKER"
 
 # Get relative path
-REL_PATH="${FILE_PATH#$CWD/}"
+REL_PATH="${FILE_PATH#"$CWD"/}"
 
 # Increment edit count
 COUNT=$(jq -r --arg f "$REL_PATH" '.[$f] // 0' "$TRACKER")
