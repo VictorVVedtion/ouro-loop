@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$OURO_LOOP_DIR/hooks/bound-guard.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$OURO_LOOP_DIR/hooks/drift-detector.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$OURO_LOOP_DIR/hooks/root-cause-tracker.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$OURO_LOOP_DIR/hooks/recall-gate.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
