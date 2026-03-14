@@ -24,7 +24,7 @@ from collections import Counter
 # Constants
 # ---------------------------------------------------------------------------
 
-RALPH_DIR = ".ouro"
+OURO_DIR = ".ouro"
 STATE_FILE = "state.json"
 RESULTS_FILE = "ouro-results.tsv"
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -221,16 +221,16 @@ def print_scan_report(scan: dict):
 # Init
 # ---------------------------------------------------------------------------
 
-def init_ralph(project_path: str):
+def init_ouro(project_path: str):
     """Initialize .ouro/ directory with initial state."""
-    ralph_path = os.path.join(project_path, RALPH_DIR)
+    ouro_path = os.path.join(project_path, OURO_DIR)
 
-    if os.path.exists(os.path.join(ralph_path, STATE_FILE)):
-        print(f"Ouro already initialized at {ralph_path}")
+    if os.path.exists(os.path.join(ouro_path, STATE_FILE)):
+        print(f"Ouro already initialized at {ouro_path}")
         print("Use 'python framework.py status' to view current state.")
         return
 
-    os.makedirs(ralph_path, exist_ok=True)
+    os.makedirs(ouro_path, exist_ok=True)
 
     # Scan the project first
     scan = scan_project(project_path)
@@ -248,7 +248,7 @@ def init_ralph(project_path: str):
         "history": [],
     }
 
-    state_path = os.path.join(ralph_path, STATE_FILE)
+    state_path = os.path.join(ouro_path, STATE_FILE)
     with open(state_path, "w") as f:
         json.dump(state, f, indent=2)
 
@@ -258,7 +258,7 @@ def init_ralph(project_path: str):
         with open(results_path, "w") as f:
             f.write("phase\tverdict\tbound_violations\ttest_pass_rate\tscope_deviation\tnotes\n")
 
-    print(f"Ouro initialized at {ralph_path}")
+    print(f"Ouro initialized at {ouro_path}")
     print(f"  State:   {state_path}")
     print(f"  Results: {results_path}")
     print()
@@ -343,6 +343,6 @@ if __name__ == "__main__":
         scan = scan_project(args.path)
         print_scan_report(scan)
     elif args.command == "init":
-        init_ralph(args.path)
+        init_ouro(args.path)
     elif args.command == "template":
         install_template(args.type, args.path)

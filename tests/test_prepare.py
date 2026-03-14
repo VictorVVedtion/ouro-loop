@@ -382,7 +382,7 @@ class TestScanProjectSkipDirs(unittest.TestCase):
         result = prepare.scan_project(self.tmp)
         self.assertEqual(result["file_count"], 0)
 
-    def test_ralph_dir_skipped(self):
+    def test_ouro_dir_skipped(self):
         # .ouro is in SKIP_DIRS
         _write(os.path.join(self.tmp, ".ouro", "state.json"), "{}")
         result = prepare.scan_project(self.tmp)
@@ -512,10 +512,10 @@ class TestScanProjectCIDetection(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# init_ralph()
+# init_ouro()
 # ---------------------------------------------------------------------------
 
-class TestInitRalphFreshInit(unittest.TestCase):
+class TestInitOuroFreshInit(unittest.TestCase):
     """Fresh initialization creates the expected files and state."""
 
     def setUp(self):
@@ -524,24 +524,24 @@ class TestInitRalphFreshInit(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_ralph_dir_created(self):
-        prepare.init_ralph(self.tmp)
+    def test_ouro_dir_created(self):
+        prepare.init_ouro(self.tmp)
         self.assertTrue(os.path.isdir(os.path.join(self.tmp, ".ouro")))
 
     def test_state_file_created(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         state_path = os.path.join(self.tmp, ".ouro", "state.json")
         self.assertTrue(os.path.exists(state_path))
 
     def test_state_file_is_valid_json(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         state_path = os.path.join(self.tmp, ".ouro", "state.json")
         with open(state_path) as f:
             state = json.load(f)
         self.assertIsInstance(state, dict)
 
     def test_state_has_required_keys(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         state_path = os.path.join(self.tmp, ".ouro", "state.json")
         with open(state_path) as f:
             state = json.load(f)
@@ -550,31 +550,31 @@ class TestInitRalphFreshInit(unittest.TestCase):
             self.assertIn(key, state)
 
     def test_state_initial_stage_is_bound(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertEqual(state["current_stage"], "BOUND")
 
     def test_state_history_empty_on_init(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertEqual(state["history"], [])
 
     def test_state_current_phase_is_none(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertIsNone(state["current_phase"])
 
     def test_state_total_phases_is_zero(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertEqual(state["total_phases"], 0)
 
     def test_results_tsv_created_with_header(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         # prepare.py uses RESULTS_FILE = "ouro-results.tsv"
         results_path = os.path.join(self.tmp, "ouro-results.tsv")
         self.assertTrue(os.path.exists(results_path))
@@ -584,7 +584,7 @@ class TestInitRalphFreshInit(unittest.TestCase):
         self.assertIn("verdict", header)
 
     def test_results_tsv_has_tab_separated_columns(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         results_path = os.path.join(self.tmp, "ouro-results.tsv")
         with open(results_path) as f:
             header = f.readline().strip()
@@ -592,20 +592,20 @@ class TestInitRalphFreshInit(unittest.TestCase):
         self.assertGreaterEqual(len(cols), 5)
 
     def test_project_name_matches_dir_basename(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertEqual(state["project_name"], os.path.basename(self.tmp))
 
     def test_version_field_present(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertIn("version", state)
         self.assertIsInstance(state["version"], str)
 
 
-class TestInitRalphBoundDetection(unittest.TestCase):
+class TestInitOuroBoundDetection(unittest.TestCase):
     """bound_defined flag in state reflects actual CLAUDE.md content."""
 
     def setUp(self):
@@ -616,27 +616,27 @@ class TestInitRalphBoundDetection(unittest.TestCase):
 
     def test_bound_defined_true_when_claude_md_has_bound(self):
         _write(os.path.join(self.tmp, "CLAUDE.md"), "## BOUND\nDO NOT DELETE PROD\n")
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertTrue(state["bound_defined"])
 
     def test_bound_defined_false_when_no_claude_md(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertFalse(state["bound_defined"])
 
     def test_bound_defined_false_when_claude_md_has_no_bound_markers(self):
         _write(os.path.join(self.tmp, "CLAUDE.md"), "# Just a readme\nNo bound here.\n")
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertFalse(state["bound_defined"])
 
 
-class TestInitRalphDoubleInit(unittest.TestCase):
-    """Calling init_ralph twice is safe — does not overwrite existing state."""
+class TestInitOuroDoubleInit(unittest.TestCase):
+    """Calling init_ouro twice is safe — does not overwrite existing state."""
 
     def setUp(self):
         self.tmp = _make_tmp()
@@ -645,7 +645,7 @@ class TestInitRalphDoubleInit(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_double_init_does_not_overwrite_state(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         state_path = os.path.join(self.tmp, ".ouro", "state.json")
 
         # Tamper with state so we can detect if it gets overwritten
@@ -655,7 +655,7 @@ class TestInitRalphDoubleInit(unittest.TestCase):
         with open(state_path, "w") as f:
             json.dump(state, f)
 
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
 
         with open(state_path) as f:
             state2 = json.load(f)
@@ -663,14 +663,14 @@ class TestInitRalphDoubleInit(unittest.TestCase):
         self.assertEqual(state2["__sentinel__"], "do-not-overwrite")
 
     def test_double_init_does_not_overwrite_results_tsv(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         results_path = os.path.join(self.tmp, "ouro-results.tsv")
 
         # Append a fake result row
         with open(results_path, "a") as f:
             f.write("1/3\tPASS\t0\tN/A\tnone\t\n")
 
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
 
         with open(results_path) as f:
             lines = f.readlines()
@@ -678,7 +678,7 @@ class TestInitRalphDoubleInit(unittest.TestCase):
         self.assertEqual(len(lines), 2)
 
 
-class TestInitRalphProjectTypes(unittest.TestCase):
+class TestInitOuroProjectTypes(unittest.TestCase):
     """project_types in state reflects detected markers."""
 
     def setUp(self):
@@ -689,13 +689,13 @@ class TestInitRalphProjectTypes(unittest.TestCase):
 
     def test_python_project_type_stored_in_state(self):
         _write(os.path.join(self.tmp, "pyproject.toml"), "[project]\nname=\"x\"\n")
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertIn("Python", state["project_types"])
 
     def test_empty_project_types_when_no_markers(self):
-        prepare.init_ralph(self.tmp)
+        prepare.init_ouro(self.tmp)
         with open(os.path.join(self.tmp, ".ouro", "state.json")) as f:
             state = json.load(f)
         self.assertEqual(state["project_types"], [])

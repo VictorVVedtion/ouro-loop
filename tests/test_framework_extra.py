@@ -42,9 +42,9 @@ def _make_state(project_path: str, **overrides) -> dict:
         "history": [],
     }
     state.update(overrides)
-    ralph_dir = os.path.join(project_path, ".ouro")
-    os.makedirs(ralph_dir, exist_ok=True)
-    with open(os.path.join(ralph_dir, "state.json"), "w") as f:
+    ouro_dir = os.path.join(project_path, ".ouro")
+    os.makedirs(ouro_dir, exist_ok=True)
+    with open(os.path.join(ouro_dir, "state.json"), "w") as f:
         json.dump(state, f, indent=2)
     return state
 

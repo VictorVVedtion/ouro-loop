@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ouro Loop Benchmark</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        
+        body {
+            background-color: #050505;
+            color: #ededed;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(255, 107, 0, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(0, 153, 255, 0.05) 0%, transparent 50%);
+        }
+        
+        .container {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 48px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 15px;
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 15px;
+        }
+
+        th, td {
+            padding: 18px 24px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            font-weight: 500;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th:not(:first-child) {
+            text-align: right;
+        }
+
+        td:not(:first-child) {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .metric-name {
+            font-weight: 500;
+            color: #fff;
+            display: flex;
+            align-items: center;
+        }
+
+        .tier-10 {
+            color: #777;
+        }
+
+        .tier-11 {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .delta {
+            font-weight: 700;
+        }
+
+        .delta.positive {
+            color: #ff6b00;
+            text-shadow: 0 0 16px rgba(255, 107, 0, 0.4);
+        }
+
+        .delta.neutral {
+            color: #666;
+        }
+        
+        .iron-law .metric-name::after {
+            content: "IRON LAW";
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 107, 0, 0.15);
+            color: #ff6b00;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 107, 0, 0.3);
+            margin-left: 12px;
+            font-weight: 700;
+        }
+
+        .highlight-row {
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.04), transparent);
+        }
+
+        .badge {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="badge">Ouro Loop Session 0x9f2a</div>
+            <h1>Autonomous Remediation Benchmark</h1>
+            <p>L1 Blockchain Consensus Target (Tier 10 Baseline vs. Tier 11 Agent)</p>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Performance Metric</th>
+                    <th>Tier 10 (Before)</th>
+                    <th>Tier 11 (Ouro Loop)</th>
+                    <th>Delta</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="metric-name">Block time (idle)</td>
+                    <td class="tier-10">111ms</td>
+                    <td class="tier-11">52ms</td>
+                    <td class="delta positive">-53%</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">Block time (soak load)</td>
+                    <td class="tier-10">111 - 200ms</td>
+                    <td class="tier-11">52 - 57ms</td>
+                    <td class="delta positive">-53%</td>
+                </tr>
+                <tr class="highlight-row">
+                    <td class="metric-name">Precommit Phase (soak load)</td>
+                    <td class="tier-10">100 - 200ms</td>
+                    <td class="tier-11">5 - 35ms</td>
+                    <td class="delta positive">-85%</td>
+                </tr>
+                <tr class="highlight-row">
+                    <td class="metric-name">Soak TPS Variance</td>
+                    <td class="tier-10">40.6%</td>
+                    <td class="tier-11">1.6%</td>
+                    <td class="delta positive">-96%</td>
+                </tr>
+                <tr>
+                    <td class="metric-name">Blocks/sec (soak load)</td>
+                    <td class="tier-10">~8.0</td>
+                    <td class="tier-11">~18.5</td>
+                    <td class="delta positive">+131%</td>
+                </tr>
+                <tr class="iron-law">
+                    <td class="metric-name">System Error Rate</td>
+                    <td class="tier-10">0.00%</td>
+                    <td class="tier-11">0.00%</td>
+                    <td class="delta neutral">=</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

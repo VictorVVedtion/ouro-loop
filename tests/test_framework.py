@@ -48,9 +48,9 @@ def _make_state(project_path: str, **overrides) -> dict:
         "history": [],
     }
     state.update(overrides)
-    ralph_dir = os.path.join(project_path, ".ouro")
-    os.makedirs(ralph_dir, exist_ok=True)
-    with open(os.path.join(ralph_dir, "state.json"), "w") as f:
+    ouro_dir = os.path.join(project_path, ".ouro")
+    os.makedirs(ouro_dir, exist_ok=True)
+    with open(os.path.join(ouro_dir, "state.json"), "w") as f:
         json.dump(state, f, indent=2)
     return state
 
@@ -104,9 +104,9 @@ class TestLoadStateCorrupted(unittest.TestCase):
 
     def setUp(self):
         self.tmp = _make_tmp()
-        ralph_dir = os.path.join(self.tmp, ".ouro")
-        os.makedirs(ralph_dir)
-        self.state_path = os.path.join(ralph_dir, "state.json")
+        ouro_dir = os.path.join(self.tmp, ".ouro")
+        os.makedirs(ouro_dir)
+        self.state_path = os.path.join(ouro_dir, "state.json")
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -567,7 +567,7 @@ class TestRunSelfAssessmentTestsExist(unittest.TestCase):
         checks = framework.run_self_assessment(self.tmp)
         self.assertGreater(len(checks["tests_exist"]["detail"]), 0)
 
-    def test_tests_exist_ralph_dir_not_scanned(self):
+    def test_tests_exist_ouro_dir_not_scanned(self):
         # Files in .ouro should not influence test detection
         _write(os.path.join(self.tmp, ".ouro", "test_internal.py"), "")
         checks = framework.run_self_assessment(self.tmp)
@@ -1023,7 +1023,7 @@ class TestIntegrationInitLogAdvance(unittest.TestCase):
     def test_full_cycle_phase_advancement(self):
         """Initialize with 3 phases, advance through all of them."""
         import prepare as prep
-        prep.init_ralph(self.tmp)
+        prep.init_ouro(self.tmp)
 
         # Manually set up a phase plan in state
         state = framework.load_state(self.tmp)
@@ -1068,7 +1068,7 @@ class TestIntegrationInitLogAdvance(unittest.TestCase):
 
     def test_tsv_has_correct_row_count_after_cycle(self):
         import prepare as prep
-        prep.init_ralph(self.tmp)
+        prep.init_ouro(self.tmp)
 
         state = framework.load_state(self.tmp)
         state["current_phase"] = 1

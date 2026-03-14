@@ -25,7 +25,7 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-RALPH_DIR = ".ouro"
+OURO_DIR = ".ouro"
 STATE_FILE = "state.json"
 RESULTS_FILE = "ouro-results.tsv"
 
@@ -49,7 +49,7 @@ def load_state(project_path: str, required: bool = True) -> dict:
 
     If required=False, returns None when state doesn't exist (for verify).
     """
-    state_path = os.path.join(project_path, RALPH_DIR, STATE_FILE)
+    state_path = os.path.join(project_path, OURO_DIR, STATE_FILE)
     if not os.path.exists(state_path):
         if not required:
             return None
@@ -69,7 +69,7 @@ def load_state(project_path: str, required: bool = True) -> dict:
 
 def save_state(project_path: str, state: dict):
     """Save ouro state to .ouro/state.json."""
-    state_path = os.path.join(project_path, RALPH_DIR, STATE_FILE)
+    state_path = os.path.join(project_path, OURO_DIR, STATE_FILE)
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
     with open(state_path, "w") as f:
         json.dump(state, f, indent=2)

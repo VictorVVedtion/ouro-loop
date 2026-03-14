@@ -234,7 +234,7 @@ class TestInstallTemplateMissingSource(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# init_ralph() — OSError on listdir (top_directories)
+# init_ouro() — OSError on listdir (top_directories)
 # ---------------------------------------------------------------------------
 
 class TestScanProjectTopDirOSError(unittest.TestCase):
