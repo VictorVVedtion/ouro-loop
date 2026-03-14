@@ -37,17 +37,9 @@ REL_PATH="${FILE_PATH#$CWD/}"
 while IFS= read -r zone; do
   [ -z "$zone" ] && continue
   if [[ "$REL_PATH" == $zone* || "$REL_PATH" == *"$zone"* ]]; then
-    # Match found — output denial JSON
-    cat << EOF
-{
-  "hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "ask",
-    "permissionDecisionReason": "DANGER ZONE: '$REL_PATH' matches bound '$zone'. This file is in a DANGER ZONE defined in CLAUDE.md. Escalate to user for approval before modifying."
-  }
-}
-EOF
-    exit 0
+    # Match found — block via exit 2, stderr goes to agent as feedback
+    echo "DANGER ZONE: '$REL_PATH' matches bound '$zone' in CLAUDE.md. You must escalate to the user before modifying this file. Do NOT retry this edit without explicit user approval." >&2
+    exit 2
   fi
 done <<< "$DANGER_ZONES"
 
