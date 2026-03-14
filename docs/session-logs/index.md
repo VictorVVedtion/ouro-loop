@@ -1,30 +1,44 @@
 # Session Logs
 
-Full session logs from real Ouro Loop autonomous coding sessions. These logs document every hypothesis tested, every verification gate fired, every autonomous remediation executed, and every lesson fed back into BOUND.
-
-Session logs are the primary evidence that Ouro Loop's methodology works in practice — not just in theory.
+Session logs are detailed records of real Ouro Loop sessions on production codebases. Each log captures the full methodology in action: BOUND constraints, MAP analysis, hypothesis testing, verification gate outcomes, autonomous remediations, and the lessons fed back into BOUND through the LOOP stage. These are not hypothetical examples — they are anonymized transcripts from actual autonomous coding sessions.
 
 ---
 
-## Available Logs
+## Available Session Logs
 
 ### :material-cube-outline: Blockchain L1 — Consensus Performance Regression
 
-A Layer 1 blockchain investigation where the agent tested 5 hypotheses to find why precommit latency spiked under load. The ROOT_CAUSE gate fired 4 times before the agent discovered the real cause: a single-node HTTP bottleneck, not a code bug.
+A complex investigation into why precommit latency spiked from 4ms to 200ms under transaction load on a 4-validator PBFT blockchain. The agent tested 5 hypotheses, autonomously remediated 4 failures, and discovered that the root cause was architectural (single-node HTTP bottleneck), not code-level.
 
-**Key numbers:** 5 hypotheses, 4 remediations, -98% precommit latency, -96% TPS variance
+**Session stats:**
 
-[:material-file-document: Full Session Log](blockchain-l1.md)
+| | |
+|---|---|
+| Hypotheses tested | 5 |
+| Autonomous remediations | 4 |
+| ROOT_CAUSE gate fires | 4 |
+| IRON LAW violations | 0 |
+| Complexity | Complex (DANGER ZONE, unknown root cause) |
+
+[:material-file-document: Read Full Session Log](blockchain-l1.md)
 
 ---
 
 ### :material-cellphone: Consumer Product — Lint Remediation
 
-A React/Next.js lint cleanup where the ROOT_CAUSE gate caught a lazy fix (restructuring a useEffect instead of eliminating it) and pushed the agent toward a genuinely better derived-state pattern.
+A simple session where the agent eliminated 3 ESLint errors in a React/Next.js frontend. The ROOT_CAUSE gate caught a lazy fix (restructuring a `useEffect` instead of eliminating it) and pushed the agent toward a derived-state pattern that was architecturally superior.
 
-**Key numbers:** 3 errors fixed, 1 remediation, 0 DANGER ZONES touched
+**Session stats:**
 
-[:material-file-document: Full Session Log](consumer-product.md)
+| | |
+|---|---|
+| Errors fixed | 3 |
+| Autonomous remediations | 1 |
+| ROOT_CAUSE gate fires | 1 |
+| IRON LAW violations | 0 |
+| Complexity | Simple (2 files, no DANGER ZONE) |
+
+[:material-file-document: Read Full Session Log](consumer-product.md)
 
 ---
 
@@ -32,24 +46,17 @@ A React/Next.js lint cleanup where the ROOT_CAUSE gate caught a lazy fix (restru
 
 Each session log follows a consistent structure:
 
-1. **Context** — Project type, task, BOUND interaction
-2. **BOUND** — The active constraints from CLAUDE.md
-3. **MAP** — Problem space analysis
-4. **PLAN** — Complexity assessment and approach
-5. **BUILD + VERIFY + REMEDIATE** — The main loop with each hypothesis/fix attempt
-6. **Results** — Final metrics and verification status
-7. **LOOP** — What fed back into BOUND
-8. **Methodology Observations** — Lessons about the methodology itself
+1. **Context** — Project type, task description, BOUND interaction level
+2. **BOUND** — The constraints from CLAUDE.md that governed the session
+3. **MAP** — Problem space analysis: user expectations, failure modes, success metrics
+4. **PLAN** — Complexity classification and approach selection
+5. **BUILD + VERIFY + REMEDIATE** — The core loop execution with gate outcomes
+6. **Results** — Final verdict, metrics, remediation count
+7. **LOOP** — What was fed back into BOUND for future sessions
+8. **Methodology Observations** — Retrospective analysis of what the methodology did well and what it could improve
 
 ---
 
 ## Contributing Session Logs
 
-If you've run an Ouro Loop session on a real project, consider submitting a sanitized session log. The most valuable logs demonstrate:
-
-- Autonomous remediation in action (the agent fixing its own mistakes)
-- ROOT_CAUSE gate preventing premature conclusions
-- BOUND growing after a session (LOOP feedback)
-- Unexpected root causes (architectural, not code-level)
-
-See [CONTRIBUTING.md](https://github.com/VictorVVedtion/ouro-loop/blob/main/CONTRIBUTING.md) for submission guidelines.
+If you have used Ouro Loop on a real project and want to contribute a session log, sanitize proprietary details (project names, specific business logic, internal file paths) and submit to `examples/`. The most valuable logs are those where the methodology caught something unexpected — a root cause that was architectural rather than code-level, a gate that prevented a lazy fix, or a step-back rule that redirected investigation. See [CONTRIBUTING.md](https://github.com/VictorVVedtion/ouro-loop/blob/main/CONTRIBUTING.md).

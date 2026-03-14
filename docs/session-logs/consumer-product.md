@@ -1,13 +1,19 @@
-# Session Log: Lint Error Remediation in React/Next.js App
+# Session Log: Consumer Product — Lint Error Remediation
 
-A real Ouro Loop session on a consumer iOS/web product. Names and specifics anonymized.
+This is a complete session log from a real Ouro Loop session on a consumer iOS/web product. The agent was tasked with eliminating all ESLint errors to establish a clean lint baseline. Despite being a simple task (2 files, no DANGER ZONE), the ROOT_CAUSE verification gate caught a lazy fix attempt and pushed the agent toward a genuinely superior solution pattern, demonstrating that even straightforward tasks benefit from structured verification.
+
+---
 
 ## Context
 
-- **Project type**: Next.js 15 + React 19 + TypeScript consumer app
-- **Task**: Eliminate all ESLint errors to establish clean lint baseline
-- **BOUND interaction**: None (no DANGER ZONE touched)
-- **Complexity**: Simple (config + 2 files)
+| | |
+|---|---|
+| **Project type** | Next.js 15 + React 19 + TypeScript consumer app |
+| **Task** | Eliminate all ESLint errors to establish clean lint baseline |
+| **BOUND interaction** | None (no DANGER ZONE touched) |
+| **Complexity** | Simple (config + 2 files) |
+
+---
 
 ## BOUND (from CLAUDE.md)
 
@@ -20,6 +26,8 @@ IRON LAWS:
   - Core engine calculations must be deterministic
 ```
 
+---
+
 ## MAP
 
 ```
@@ -30,6 +38,8 @@ Dependencies:    ESLint + React Compiler + Next.js built-in rules
 Reusable:        Next.js default ESLint config already present
 Success metric:  0 lint errors (warnings acceptable)
 ```
+
+---
 
 ## Baseline
 
@@ -43,6 +53,8 @@ Errors:
 3. ReadingPage.tsx:78   — setState in useEffect (react-hooks/set-state-in-effect)
 ```
 
+---
+
 ## BUILD — Fix 1: Replace `<a>` with `<Link>`
 
 ```
@@ -52,6 +64,8 @@ Risk:   None — server component, Link works in both server and client
 ```
 
 Straightforward fix. No DANGER ZONE involvement.
+
+---
 
 ## BUILD — Fix 2: Eliminate setState in useEffect (Attempt 1)
 
@@ -68,8 +82,7 @@ $ npx eslint .
 ReadingPage.tsx:81  error  setState synchronously within an effect
 ```
 
-The React Compiler's `set-state-in-effect` rule is stricter than expected.
-Even wrapping setState in a conditional inside useEffect still triggers it.
+The React Compiler's `set-state-in-effect` rule is stricter than expected. Even wrapping setState in a conditional inside useEffect still triggers it.
 
 ```
 [REMEDIATED] gate=ROOT_CAUSE action=revert_and_retry
@@ -78,6 +91,8 @@ Even wrapping setState in a conditional inside useEffect still triggers it.
   now: eliminating the effect entirely — pure derived state
   bound: not in DANGER ZONE, safe to experiment
 ```
+
+---
 
 ## BUILD — Fix 2: Eliminate setState in useEffect (Attempt 2)
 
@@ -113,6 +128,8 @@ $ npx next build
 ✓ Build successful
 ```
 
+---
+
 ## Results
 
 ```
@@ -123,7 +140,9 @@ $ npx next build
   remediation:  1 — ROOT_CAUSE gate caught symptom-level fix, forced deeper solution
 ```
 
-## LOOP — What fed back into BOUND
+---
+
+## LOOP — What Fed Back Into BOUND
 
 ```
 IRON LAWS (considered adding):
@@ -133,9 +152,11 @@ Decision: Not added yet — team should discuss whether warnings
 should also block. Flagged for next review.
 ```
 
+---
+
 ## Methodology Observations
 
-1. **ROOT_CAUSE gate caught a lazy fix** — first attempt "fixed" the lint error by restructuring the effect but keeping setState. The gate correctly identified this as symptom-patching. The real fix was eliminating the effect entirely.
+1. **ROOT_CAUSE gate caught a lazy fix** — the first attempt "fixed" the lint error by restructuring the effect but keeping setState. The gate correctly identified this as symptom-patching. The real fix was eliminating the effect entirely.
 
 2. **The derived state pattern was superior** — not just lint-clean, but architecturally better. React's mental model prefers computed values over synchronized state. The methodology pushed toward a genuinely better solution, not just a passing test.
 

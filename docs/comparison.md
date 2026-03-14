@@ -1,111 +1,119 @@
 # Comparison
 
-Ouro Loop occupies a specific position on the autonomy spectrum for AI coding agents: it provides bounded autonomy with runtime enforcement, sitting between human-in-the-loop tools (Cursor, Copilot) that require constant developer attention and unbounded agents (raw LLM prompting) that lack safety constraints. This page compares Ouro Loop against static rule files, monitoring-only tools, and raw LLM agents across key dimensions.
+Ouro Loop occupies a specific position in the AI coding tool landscape: it is a methodology + runtime framework for **bounded autonomous coding sessions**. This page compares it against the common alternatives to help you decide when Ouro Loop is the right tool.
 
 ---
 
 ## The Autonomy Spectrum
 
-```
-Complete Manual  ← ──────────────────────────────── →  Complete Autonomy
-   IDE only       human-in-loop     bounded autonomy      unbounded agent
-                 (Cursor/Copilot)    (Ouro Loop)           (raw LLM)
+```mermaid
+graph LR
+    classDef low fill:#2d3748,stroke:#63b3ed,stroke-width:2px,color:#fff;
+    classDef mid fill:#4a1c40,stroke:#fc8181,stroke-width:2px,color:#fff;
+    classDef high fill:#1e4620,stroke:#68d391,stroke-width:2px,color:#fff;
+
+    A["Human-in-the-Loop<br/><i>Ask permission for everything</i>"]:::low
+    B["Static Rules<br/><i>.cursorrules, CLAUDE.md</i>"]:::low
+    C["Bounded Autonomy<br/><i>Ouro Loop</i>"]:::mid
+    D["Unbounded Autonomy<br/><i>Raw LLM + 'just build it'</i>"]:::high
+
+    A --> B --> C --> D
 ```
 
-| Position | Description | Failure Mode |
-|----------|-------------|-------------|
-| **IDE only** | Human writes all code, AI provides completions | Slowest. No autonomy. |
-| **Human-in-the-loop** | Agent proposes, human approves. Constant back-and-forth. | Developer becomes a babysitter. Cannot run overnight. |
-| **Bounded autonomy** | Agent operates freely within enforced constraints. Detects, decides, acts, reports. | Requires upfront BOUND definition. Setup overhead for simple tasks. |
-| **Unbounded agent** | Agent has full freedom. No constraints, no verification. | Hallucination, drift, constraint violation, context decay. |
-
-Ouro Loop targets the **bounded autonomy** zone: maximum agent freedom with minimum catastrophic risk.
+| Approach | Autonomy | Safety | Overhead | Best For |
+|----------|----------|--------|----------|----------|
+| Human-in-the-loop | None | Highest | Very high (constant interrupts) | Pair programming, learning |
+| Static rules | Low | Medium | Low | Quick projects, simple constraints |
+| **Bounded autonomy (Ouro Loop)** | **High** | **High** | **Medium (one-time BOUND setup)** | **Overnight builds, critical systems** |
+| Unbounded autonomy | Maximum | Lowest | None | Prototypes, throwaway code |
 
 ---
 
-## Ouro Loop vs Static Rule Files
+## Ouro Loop vs Static Rules (.cursorrules, CLAUDE.md)
 
-Static rule files (`.cursorrules`, `CLAUDE.md` instructions, `.aider.conf`) tell the agent what to do but cannot enforce compliance.
+Static rules files (`.cursorrules`, `CLAUDE.md` without Ouro Loop) define instructions that the agent is told to follow. They are simple, fast to set up, and effective for straightforward guidelines.
 
 | Dimension | Static Rules | Ouro Loop |
 |-----------|-------------|-----------|
-| **Constraint definition** | Markdown instructions in a config file | BOUND system: DANGER ZONES + NEVER DO + IRON LAWS |
-| **Enforcement mechanism** | Agent's good behavior (can be ignored) | Runtime hooks with exit 2 hard-block (physically impossible to bypass) |
-| **Verification** | None — agent self-reports | Multi-layer gates: EXIST, RELEVANCE, ROOT_CAUSE, RECALL, MOMENTUM |
-| **On failure** | Agent asks human or silently proceeds | Autonomous remediation: detect, decide, act, report |
-| **State tracking** | None | Phase progress, verification history, remediation log |
-| **Drift detection** | None | Drift detector hook warns at 5+ directory scope |
-| **Context decay** | Agent forgets constraints over time | Recall gate re-injects BOUND before context compression |
-| **Overnight operation** | Risky — no safety net | Designed for it — continuous verification loop |
+| **Constraint enforcement** | Agent is *told* to follow rules | Agent is *blocked* from violating rules (exit 2 hooks) |
+| **Self-correction** | Agent asks human when stuck | Agent remediates autonomously within BOUND |
+| **Verification** | Manual or none | Multi-layer gates (EXIST, RELEVANCE, ROOT_CAUSE, RECALL, MOMENTUM) |
+| **State tracking** | None | Phase progress, verification results, remediation log |
+| **Loop feedback** | Rules are static | LOOP stage feeds lessons back into BOUND |
+| **Setup cost** | Minutes | ~30 minutes for BOUND definition |
+| **Best for** | Quick tasks, interactive coding | Long autonomous sessions, critical constraints |
 
-**Bottom line:** Static rules are suggestions. Ouro Loop constraints are enforced by the runtime.
+!!! tip "When to use which"
+    If your task takes less than 30 minutes and doesn't touch critical files, static rules are sufficient. If you want to let the agent run for hours without supervision, Ouro Loop's runtime enforcement and autonomous remediation justify the setup cost.
 
 ---
 
 ## Ouro Loop vs Monitoring Tools
 
-Monitoring and observability tools (linters, CI checks, static analysis, code review bots) detect problems but rely on humans to fix them.
+Monitoring tools (linters, CI checks, observability platforms) detect issues and alert humans. They follow a **detect → alert → wait** pattern.
 
 | Dimension | Monitoring Tools | Ouro Loop |
 |-----------|-----------------|-----------|
-| **Detection** | Automated (linting, tests, coverage) | Automated (5 verification gates + custom checks) |
-| **Response to failure** | Alert human, create issue, block merge | Agent autonomously remediates: revert, retry, try alternative approach |
-| **Action model** | Detect → Alert → Wait for human | Detect → Decide → Act → Report |
-| **Loop closure** | Human fixes, re-runs check | Agent fixes, re-verifies, advances or retries |
-| **Learning** | Static rules updated manually | LOOP stage feeds discoveries back into BOUND after each session |
-| **Scope** | Per-check (lint, test, coverage) | Per-session (multi-phase, multi-check, continuous) |
-| **Autonomous operation** | No — requires human response | Yes — within BOUND |
+| **Response to failure** | Alert human, wait | Agent remediates autonomously |
+| **Action model** | Detect → Alert → Wait | Detect → Decide → Act → Report |
+| **Human involvement** | Required for every issue | Only for DANGER ZONE violations |
+| **Loop closure** | Human closes the loop | Agent closes the loop (VERIFY → REMEDIATE → BUILD) |
+| **Prevention** | Post-hoc detection | Pre-emptive BOUND definition + runtime blocking |
 
-**Bottom line:** Monitoring tools detect. Ouro Loop detects, decides, and acts.
+Ouro Loop is complementary to monitoring tools, not a replacement. Use monitoring for production observability. Use Ouro Loop for development-time autonomous agent governance.
 
 ---
 
-## Ouro Loop vs Raw LLM Agents
+## Ouro Loop vs Raw LLM Prompting
 
-Raw LLM agents (ChatGPT with code execution, Claude without constraints, unstructured agent prompts) have full autonomy with no guardrails.
+Raw LLM prompting ("just tell the agent to build it") offers maximum speed and zero setup overhead. However, it provides no guardrails against the known failure modes of AI coding agents.
 
-| Dimension | Raw LLM Agent | Ouro Loop |
-|-----------|--------------|-----------|
-| **Constraint awareness** | None unless prompted | BOUND formally defined and runtime-enforced |
-| **Hallucination prevention** | Hope-based | EXIST gate checks file/API existence before proceeding |
-| **Drift prevention** | None | RELEVANCE gate + drift detector hook |
-| **Stuck loop prevention** | None | ROOT_CAUSE gate + root-cause tracker hook (warns at 3+ edits) |
-| **Context decay** | Agent silently forgets | RECALL gate + recall-gate hook re-injects BOUND |
-| **Self-correction** | Random retry or give up | Structured remediation playbook with escalation rules |
-| **Auditability** | Chat history only | Verification logs, phase results, remediation reports |
-| **Reproducibility** | None | Structured phases, logged decisions, TSV result history |
-
-**Bottom line:** Raw agents are powerful but uncontrolled. Ouro Loop channels that power within safe boundaries.
+| Failure Mode | Raw LLM Prompting | Ouro Loop |
+|-------------|-------------------|-----------|
+| **Hallucinated file paths** | Common, no detection | EXIST gate checks file existence before proceeding |
+| **Scope drift** | Common, no detection | RELEVANCE gate + drift-detector hook |
+| **Stuck loops** | Common (edit-break-edit-break) | ROOT_CAUSE gate + root-cause-tracker hook |
+| **Context decay** | Inevitable in long sessions | RECALL gate + recall-gate hook re-injects BOUND |
+| **Breaking critical files** | Possible | DANGER ZONE hooks physically block edits (exit 2) |
+| **No verification** | Agent decides when it's "done" | Multi-layer gates verify correctness at every phase |
 
 ---
 
 ## Ouro Loop vs autoresearch
 
-Ouro Loop was directly inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch). Both share the same core idea: give an AI agent a loop and let it iterate autonomously.
+Ouro Loop is directly inspired by Karpathy's autoresearch. Both share the paradigm of "human writes the program, AI executes within constraints."
 
 | Dimension | autoresearch | Ouro Loop |
 |-----------|-------------|-----------|
-| **Domain** | ML training experiments | General software engineering |
+| **Domain** | ML experiments (training loops) | General software engineering |
 | **Human programs** | `program.md` (experiment strategy) | `program.md` (dev strategy) + `CLAUDE.md` (boundaries) |
 | **AI modifies** | `train.py` (model code) | Target project code + `framework.py` |
 | **Fixed constraint** | 5-minute training budget | BOUND (DANGER ZONES, NEVER DO, IRON LAWS) |
 | **Core metric** | val_bpb (lower is better) | Multi-layer verification (gates + self-assessment) |
 | **On failure** | Auto-revert, try next experiment | Auto-remediate, try alternative approach |
-| **Read-only files** | `prepare.py` | `prepare.py` + `modules/` |
-| **Scope** | Single-file optimization | Multi-file, multi-phase development |
-
-**Bottom line:** autoresearch pioneered the autonomous loop for ML. Ouro Loop generalizes it to all software engineering with formal constraint enforcement.
+| **Read-only** | `prepare.py` | `prepare.py` + `modules/` |
+| **Runtime enforcement** | Implicit (training budget) | Explicit (hooks, exit 2, verification gates) |
 
 ---
 
-## When to Use What
+## When NOT to Use Ouro Loop
 
-| Scenario | Recommended Approach |
-|----------|---------------------|
-| Quick prototype, hackathon | Static rules or no framework |
-| Interactive pair programming | Human-in-the-loop (Cursor, Copilot) |
-| Overnight autonomous builds | **Ouro Loop** |
-| Long-running refactors | **Ouro Loop** |
-| Production code with critical constraints | **Ouro Loop** |
-| ML experiment iteration | autoresearch or Ouro Loop with ML BOUND |
-| Simple scripts, single-file projects | Raw LLM agent is sufficient |
+Ouro Loop adds overhead that isn't justified for every project:
+
+- **Quick prototypes** — BOUND definition takes ~30 minutes. If the project takes less time than that, skip it.
+- **Single-file scripts** — The methodology overhead exceeds the benefit for trivial tasks.
+- **Interactive coding** — Ouro Loop is designed for "set it and let it run," not for real-time pair programming.
+- **Learning/exploration** — When you want to watch the agent work and learn from it, human-in-the-loop is more appropriate.
+
+---
+
+## Summary Decision Matrix
+
+| Your Situation | Recommended Approach |
+|---------------|---------------------|
+| Quick prototype, no critical files | Static rules (.cursorrules) |
+| Interactive feature development | Static rules + manual verification |
+| Overnight autonomous build on critical codebase | **Ouro Loop** |
+| Long refactoring with safety constraints | **Ouro Loop** |
+| ML experiment automation | **Ouro Loop** (or autoresearch directly) |
+| Throwaway code, no constraints | Raw LLM prompting |
