@@ -74,7 +74,7 @@ PROJECT_MARKERS = {
 # Scan
 # ---------------------------------------------------------------------------
 
-def scan_project(project_path: str) -> dict:
+def scan_project(project_path: str) -> dict[str, any]:
     """Scan a project directory and return a structured summary."""
     project_path = os.path.abspath(project_path)
     if not os.path.isdir(project_path):
@@ -166,7 +166,7 @@ def scan_project(project_path: str) -> dict:
     return result
 
 
-def print_scan_report(scan: dict):
+def print_scan_report(scan: dict) -> None:
     """Print a human-readable scan report."""
     print(f"{'=' * 60}")
     print(f"  Ouro Loop — Project Scan")
@@ -221,7 +221,7 @@ def print_scan_report(scan: dict):
 # Init
 # ---------------------------------------------------------------------------
 
-def init_ouro(project_path: str):
+def init_ouro(project_path: str) -> None:
     """Initialize .ouro/ directory with initial state."""
     ouro_path = os.path.join(project_path, OURO_DIR)
 
@@ -280,7 +280,7 @@ TEMPLATE_MAP = {
     "verify": "verify-checklist.md.template",
 }
 
-def install_template(template_type: str, project_path: str):
+def install_template(template_type: str, project_path: str) -> None:
     """Copy a template to the project directory."""
     if template_type not in TEMPLATE_MAP:
         print(f"Unknown template type: {template_type}")
