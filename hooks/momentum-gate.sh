@@ -65,7 +65,7 @@ if [ "$ACTIONS" -ge 10 ]; then
   "additionalContext": "[MOMENTUM] ${READS} reads, ${WRITES} writes in last 10 actions. You may be stuck in analysis paralysis. Stop reading and write something — a test, a stub, a prototype. Iterate."
 }
 EOF
-  elif [ "$WRITES" -gt 0 ] && [ "$((READS / WRITES))" -ge 3 ]; then
+  elif [ "$WRITES" -gt 0 ] && [ "$READS" -ge "$((WRITES * 3))" ]; then
     cat << EOF
 {
   "additionalContext": "[MOMENTUM] Read/write ratio is ${READS}:${WRITES} (above 3:1 threshold). Consider making forward progress — write code, don't just read."

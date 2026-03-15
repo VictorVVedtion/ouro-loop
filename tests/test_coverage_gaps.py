@@ -106,36 +106,23 @@ class TestRunVerificationReviewPath(unittest.TestCase):
     def test_fail_takes_priority_over_review(self, mock_run):
         """Gate FAIL + review required → overall = FAIL, not REVIEW."""
         mock_run.return_value = MagicMock(stdout="", returncode=0)
-        # Create a state with bound_defined=True AND a CLAUDE.md that
-        # has bound markers (so refresh doesn't clear bound_defined).
-        # Then force EXIST gate to fail by mocking os.path.exists.
         _make_state(self.tmp, bound_defined=True)
         _write(os.path.join(self.tmp, "CLAUDE.md"), "## BOUND\nrules\n")
 
-        # Mock os.path.exists to return False for CLAUDE.md in run_gates
-        # but True elsewhere — simulating a race condition or
-        # file that disappeared after verify started.
-        original_exists = os.path.exists
-
-        call_count = {"claude_md": 0}
-
-        def selective_exists(path):
-            if path.endswith("CLAUDE.md"):
-                call_count["claude_md"] += 1
-                # First call (refresh) sees it, second call (EXIST gate) doesn't
-                if call_count["claude_md"] >= 3:
-                    return False
-            return original_exists(path)
-
-        with patch("os.path.exists", side_effect=selective_exists):
+        # Force a deterministic FAIL by mocking run_gates
+        fake_gates = {
+            "EXIST": {"status": "FAIL", "detail": "forced"},
+            "RELEVANCE": {
+                "status": "WARN",
+                "files": ["src/x.py"],
+                "danger_zone_files": ["src/x.py (zone: src/)"],
+            },
+        }
+        with patch("framework.run_gates", return_value=fake_gates):
             results = framework.run_verification(self.tmp)
-        # When EXIST gate fails, overall should be FAIL
-        if results["layer1_gates"].get("EXIST", {}).get("status") == "FAIL":
-            self.assertEqual(results["overall"], "FAIL")
-        else:
-            # If refresh prevented the FAIL, verify the refresh worked
-            state = framework.load_state(self.tmp)
-            self.assertTrue(state["bound_defined"])
+        # FAIL must take priority even when review is also required
+        self.assertEqual(results["overall"], "FAIL")
+        self.assertIn("EXIST", results["failures"])
 
 
 # ---------------------------------------------------------------------------

@@ -102,11 +102,16 @@ def load_state(project_path: str, required: bool = True) -> dict:
 
 
 def save_state(project_path: str, state: dict):
-    """Save ouro state to .ouro/state.json."""
+    """Save ouro state to .ouro/state.json (atomic write)."""
     state_path = os.path.join(project_path, OURO_DIR, STATE_FILE)
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
-    with open(state_path, "w") as f:
+    tmp_path = state_path + ".tmp"
+    with open(tmp_path, "w") as f:
         json.dump(state, f, indent=2)
+    try:
+        os.replace(tmp_path, state_path)
+    except OSError:
+        shutil.move(tmp_path, state_path)
 
 
 # ---------------------------------------------------------------------------
@@ -1236,6 +1241,14 @@ def check_bound(project_path: str):
         print(f"  Parsed IRON LAWS: {len(bound_data['iron_laws'])}")
         for il in bound_data["iron_laws"][:5]:
             print(f"    - {il}")
+
+    source = bound_data.get("parse_source", "none")
+    if source == "fallback":
+        print(
+            "\n  [!] Parse source: fallback (prose-style CLAUDE.md, results may be noisy)"
+        )
+    elif source == "structured":
+        print("\n  Parse source: structured")
 
     print()
     if all_defined:
