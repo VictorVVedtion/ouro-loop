@@ -1265,7 +1265,8 @@ def check_bound(project_path: str):
 # Main
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def main():
+    """CLI entry point for Ouro Loop framework."""
     parser = argparse.ArgumentParser(
         description="Ouro Loop — Development methodology runtime"
     )
@@ -1329,3 +1330,7 @@ if __name__ == "__main__":
         check_bound(args.path)
     elif args.command == "reflect":
         print_reflective_summary(args.path, args.last)
+
+
+if __name__ == "__main__":
+    main()
