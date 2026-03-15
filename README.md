@@ -181,6 +181,14 @@ python framework.py log PASS --path . --notes "phase 1 done"  # Record result
 python framework.py advance .      # Move to next phase
 ```
 
+**Quick help:** Use `--help` to see all available commands:
+
+```bash
+python framework.py --help        # Show all commands
+python framework.py status --help # Show status command options
+python framework.py verify --help # Show verify command options
+```
+
 **Verify** runs multi-layer gate checks and shows exactly what's healthy and what's not:
 
 ```
