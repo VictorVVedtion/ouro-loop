@@ -74,7 +74,7 @@ PROJECT_MARKERS = {
 # Scan
 # ---------------------------------------------------------------------------
 
-def scan_project(project_path: str) -> dict:
+def scan_project(project_path: str) -> dict[str, any]:
     """Scan a project directory and return a structured summary."""
     project_path = os.path.abspath(project_path)
     if not os.path.isdir(project_path):
