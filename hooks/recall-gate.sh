@@ -7,8 +7,12 @@
 CWD=$(cat | jq -r '.cwd // empty')
 
 CLAUDE_MD=""
-for candidate in "$CWD/CLAUDE.md" "$CWD/../CLAUDE.md"; do
-  [ -f "$candidate" ] && CLAUDE_MD="$candidate" && break
+SEARCH_DIR="$CWD"
+for _ in 1 2 3 4 5; do
+  [ -f "$SEARCH_DIR/CLAUDE.md" ] && CLAUDE_MD="$SEARCH_DIR/CLAUDE.md" && break
+  PARENT=$(dirname "$SEARCH_DIR")
+  [ "$PARENT" = "$SEARCH_DIR" ] && break
+  SEARCH_DIR="$PARENT"
 done
 
 if [ -z "$CLAUDE_MD" ]; then
@@ -17,7 +21,7 @@ if [ -z "$CLAUDE_MD" ]; then
 fi
 
 # Extract the BOUND section (everything between ## BOUND and the next ##)
-BOUND_SECTION=$(sed -n '/^## BOUND/,/^## [^B]/p' "$CLAUDE_MD" | head -50)
+BOUND_SECTION=$(sed -n '/^## BOUND/,/^## [^B]/p' "$CLAUDE_MD")
 
 if [ -n "$BOUND_SECTION" ]; then
   echo "[RECALL] Context compacting. Re-injecting BOUND constraints:"

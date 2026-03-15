@@ -34,3 +34,6 @@ py-modules = ["framework", "prepare"]
 
 [tool.setuptools.package-data]
 "*" = ["*.md", "*.sh", "*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -306,15 +306,18 @@ class TestRunVerificationBoundViolations(unittest.TestCase):
         self.assertEqual(data_row[2], "0")  # bound_violations column
 
     def test_bound_violations_incremented_when_gate_fails(self):
-        # Force EXIST gate to FAIL
+        # Force gate FAIL by mocking run_gates directly
         _make_state(self.tmp, current_phase=1, total_phases=3, bound_defined=True)
+        _write(os.path.join(self.tmp, "CLAUDE.md"), "## BOUND\nrules\n")
         results_path = os.path.join(self.tmp, "ouro-results.tsv")
         with open(results_path, "w") as f:
             f.write("phase\tverdict\tbound_violations\ttest_pass_rate\tscope_deviation\tnotes\n")
 
         mock_result = MagicMock()
         mock_result.stdout = ""
-        with patch("framework.subprocess.run", return_value=mock_result):
+        fake_gates = {"EXIST": {"status": "FAIL", "detail": "forced"}}
+        with patch("framework.subprocess.run", return_value=mock_result), \
+             patch("framework.run_gates", return_value=fake_gates):
             framework.log_phase_result(self.tmp, "FAIL")
 
         with open(results_path) as f:

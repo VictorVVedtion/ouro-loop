@@ -632,11 +632,16 @@ class TestRunVerification(unittest.TestCase):
         self.assertEqual(results["overall"], "PASS")
 
     def test_overall_fail_when_gate_fails(self):
-        # Force EXIST gate to FAIL by expecting BOUND but no CLAUDE.md
+        # Force EXIST gate to FAIL by mocking run_gates directly
         _make_state(self.tmp, bound_defined=True)
+        _write(os.path.join(self.tmp, "CLAUDE.md"), "## BOUND\nrules\n")
         mock_result = MagicMock()
         mock_result.stdout = ""
-        with patch("framework.subprocess.run", return_value=mock_result):
+        fake_gates = {
+            "EXIST": {"status": "FAIL", "detail": "forced fail for test"},
+        }
+        with patch("framework.subprocess.run", return_value=mock_result), \
+             patch("framework.run_gates", return_value=fake_gates):
             results = framework.run_verification(self.tmp)
         self.assertEqual(results["overall"], "FAIL")
 
@@ -664,10 +669,17 @@ class TestRunVerification(unittest.TestCase):
         self.assertIsInstance(results["layer2_self"], dict)
 
     def test_failures_key_populated_on_fail(self):
+        # Force a genuine FAIL: create CLAUDE.md with bound markers so
+        # bound_defined stays True, then mock run_gates to return a FAIL.
         _make_state(self.tmp, bound_defined=True)
+        _write(os.path.join(self.tmp, "CLAUDE.md"), "## BOUND\nrules\n")
         mock_result = MagicMock()
         mock_result.stdout = ""
-        with patch("framework.subprocess.run", return_value=mock_result):
+        fake_gates = {
+            "EXIST": {"status": "FAIL", "detail": "forced fail for test"},
+        }
+        with patch("framework.subprocess.run", return_value=mock_result), \
+             patch("framework.run_gates", return_value=fake_gates):
             results = framework.run_verification(self.tmp)
         self.assertIn("failures", results)
         self.assertIsInstance(results["failures"], list)

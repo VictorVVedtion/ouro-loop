@@ -17,38 +17,77 @@ import json
 import shutil
 import argparse
 from datetime import datetime, timezone
-from pathlib import Path
 from collections import Counter
+
+# Import shared constants from framework.py (DRY)
+from framework import (
+    OURO_DIR,
+    STATE_FILE,
+    RESULTS_FILE,
+    CLAUDE_MD_FILENAME,
+    parse_claude_md,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
-OURO_DIR = ".ouro"
-STATE_FILE = "state.json"
-RESULTS_FILE = "ouro-results.tsv"
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules")
 
 # File extensions to language mapping
 LANG_MAP = {
-    ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
-    ".tsx": "TypeScript (React)", ".jsx": "JavaScript (React)",
-    ".rs": "Rust", ".go": "Go", ".java": "Java", ".kt": "Kotlin",
-    ".swift": "Swift", ".rb": "Ruby", ".php": "PHP", ".c": "C",
-    ".cpp": "C++", ".h": "C/C++ Header", ".cs": "C#",
-    ".sol": "Solidity", ".move": "Move", ".vy": "Vyper",
-    ".sql": "SQL", ".sh": "Shell", ".md": "Markdown",
-    ".yml": "YAML", ".yaml": "YAML", ".toml": "TOML",
-    ".json": "JSON", ".html": "HTML", ".css": "CSS",
-    ".scss": "SCSS", ".svelte": "Svelte", ".vue": "Vue",
+    ".py": "Python",
+    ".js": "JavaScript",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript (React)",
+    ".jsx": "JavaScript (React)",
+    ".rs": "Rust",
+    ".go": "Go",
+    ".java": "Java",
+    ".kt": "Kotlin",
+    ".swift": "Swift",
+    ".rb": "Ruby",
+    ".php": "PHP",
+    ".c": "C",
+    ".cpp": "C++",
+    ".h": "C/C++ Header",
+    ".cs": "C#",
+    ".sol": "Solidity",
+    ".move": "Move",
+    ".vy": "Vyper",
+    ".sql": "SQL",
+    ".sh": "Shell",
+    ".md": "Markdown",
+    ".yml": "YAML",
+    ".yaml": "YAML",
+    ".toml": "TOML",
+    ".json": "JSON",
+    ".html": "HTML",
+    ".css": "CSS",
+    ".scss": "SCSS",
+    ".svelte": "Svelte",
+    ".vue": "Vue",
 }
 
 # Directories to skip during scanning
 SKIP_DIRS = {
-    ".git", ".ouro", "node_modules", "__pycache__", ".venv",
-    "venv", ".next", "build", "dist", "target", ".idea", ".vscode",
-    "vendor", "Pods", ".build", "DerivedData", ".cache",
+    ".git",
+    ".ouro",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".next",
+    "build",
+    "dist",
+    "target",
+    ".idea",
+    ".vscode",
+    "vendor",
+    "Pods",
+    ".build",
+    "DerivedData",
+    ".cache",
 }
 
 # Marker files that indicate project type
@@ -74,94 +113,115 @@ PROJECT_MARKERS = {
 # Scan
 # ---------------------------------------------------------------------------
 
-def scan_project(project_path: str) -> dict:
-    """Scan a project directory and return a structured summary."""
-    project_path = os.path.abspath(project_path)
-    if not os.path.isdir(project_path):
-        print(f"Error: {project_path} is not a directory")
-        sys.exit(1)
 
-    result = {
-        "path": project_path,
-        "name": os.path.basename(project_path),
-        "scanned_at": datetime.now(timezone.utc).isoformat(),
-        "project_types": [],
+def _detect_project_types(project_path: str) -> list:
+    """Detect project types from marker files."""
+    types = []
+    for marker, ptype in PROJECT_MARKERS.items():
+        if os.path.exists(os.path.join(project_path, marker)):
+            types.append(ptype)
+    return types
+
+
+def _scan_files(project_path: str) -> dict:
+    """Walk the project tree and collect file statistics.
+
+    Returns a dict with: languages, file_count, dir_count, total_lines,
+    has_claude_md, has_tests, has_ci.
+    """
+    stats = {
         "languages": Counter(),
         "file_count": 0,
         "dir_count": 0,
         "total_lines": 0,
-        "top_directories": [],
         "has_claude_md": False,
         "has_tests": False,
         "has_ci": False,
-        "bound_detected": False,
-        "danger_zones": [],
     }
 
-    # Detect project types
-    for marker, ptype in PROJECT_MARKERS.items():
-        if os.path.exists(os.path.join(project_path, marker)):
-            result["project_types"].append(ptype)
-
-    # Walk the project
     for root, dirs, files in os.walk(project_path):
-        # Filter out skip directories
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
-        result["dir_count"] += len(dirs)
+        stats["dir_count"] += len(dirs)
 
         rel_root = os.path.relpath(root, project_path)
 
         for fname in files:
             filepath = os.path.join(root, fname)
-            result["file_count"] += 1
+            stats["file_count"] += 1
 
             # Language detection
             ext = os.path.splitext(fname)[1].lower()
             if ext in LANG_MAP:
-                result["languages"][LANG_MAP[ext]] += 1
-
-            # Count lines for code files
-            if ext in LANG_MAP:
+                stats["languages"][LANG_MAP[ext]] += 1
+                # Count lines for code files
                 try:
                     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                        result["total_lines"] += sum(1 for _ in f)
+                        stats["total_lines"] += sum(1 for _ in f)
                 except (OSError, PermissionError):
                     pass
 
             # Special file detection
-            if fname == "CLAUDE.md":
-                result["has_claude_md"] = True
-                # Check for BOUND markers
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        if any(marker in content for marker in
-                               ["DANGER ZONE", "NEVER DO", "IRON LAW",
-                                "## BOUND", "# BOUND"]):
-                            result["bound_detected"] = True
-                except (OSError, PermissionError):
-                    pass
+            if fname == CLAUDE_MD_FILENAME:
+                stats["has_claude_md"] = True
 
             # Test detection
             if "test" in fname.lower() or "spec" in fname.lower():
-                result["has_tests"] = True
+                stats["has_tests"] = True
 
         # CI detection
         if rel_root in [".github/workflows", ".circleci", ".gitlab-ci"]:
-            result["has_ci"] = True
+            stats["has_ci"] = True
 
-    # Top-level directories
+    return stats
+
+
+def _get_top_directories(project_path: str) -> list:
+    """List top-level directories, excluding SKIP_DIRS."""
     try:
-        top_dirs = sorted([
-            d for d in os.listdir(project_path)
-            if os.path.isdir(os.path.join(project_path, d)) and d not in SKIP_DIRS
-        ])
-        result["top_directories"] = top_dirs
+        return sorted(
+            [
+                d
+                for d in os.listdir(project_path)
+                if os.path.isdir(os.path.join(project_path, d)) and d not in SKIP_DIRS
+            ]
+        )
     except OSError:
-        pass
+        return []
 
-    # Convert Counter to dict for JSON serialization
-    result["languages"] = dict(result["languages"].most_common(10))
+
+def scan_project(project_path: str) -> dict:
+    """Scan a project directory and return a structured summary.
+
+    Orchestrates sub-functions for project type detection, file scanning,
+    BOUND detection, and directory listing (SRP).
+    """
+    project_path = os.path.abspath(project_path)
+    if not os.path.isdir(project_path):
+        print(f"Error: {project_path} is not a directory")
+        sys.exit(1)
+
+    # File statistics
+    file_stats = _scan_files(project_path)
+
+    # BOUND detection via shared parser
+    bound_data = parse_claude_md(project_path)
+
+    result = {
+        "path": project_path,
+        "name": os.path.basename(project_path),
+        "scanned_at": datetime.now(timezone.utc).isoformat(),
+        "project_types": _detect_project_types(project_path),
+        "languages": dict(file_stats["languages"].most_common(10)),
+        "file_count": file_stats["file_count"],
+        "dir_count": file_stats["dir_count"],
+        "total_lines": file_stats["total_lines"],
+        "top_directories": _get_top_directories(project_path),
+        "has_claude_md": file_stats["has_claude_md"],
+        "has_tests": file_stats["has_tests"],
+        "has_ci": file_stats["has_ci"],
+        "bound_detected": bound_data["has_bound"],
+        "danger_zones": bound_data["danger_zones"],
+    }
 
     return result
 
@@ -169,7 +229,7 @@ def scan_project(project_path: str) -> dict:
 def print_scan_report(scan: dict):
     """Print a human-readable scan report."""
     print(f"{'=' * 60}")
-    print(f"  Ouro Loop — Project Scan")
+    print("  Ouro Loop — Project Scan")
     print(f"{'=' * 60}")
     print(f"  Project:    {scan['name']}")
     print(f"  Path:       {scan['path']}")
@@ -202,11 +262,15 @@ def print_scan_report(scan: dict):
     # Recommendations
     recommendations = []
     if not scan["bound_detected"]:
-        recommendations.append("Define BOUND (DANGER ZONES, NEVER DO, IRON LAWS) before building")
+        recommendations.append(
+            "Define BOUND (DANGER ZONES, NEVER DO, IRON LAWS) before building"
+        )
     if not scan["has_tests"]:
         recommendations.append("Add tests — VERIFY stage requires testable assertions")
     if not scan["has_claude_md"]:
-        recommendations.append("Create CLAUDE.md with BOUND section (use: python prepare.py template claude)")
+        recommendations.append(
+            "Create CLAUDE.md with BOUND section (use: python prepare.py template claude)"
+        )
     if not scan["has_ci"]:
         recommendations.append("Consider adding CI for automated Layer 2 verification")
 
@@ -217,9 +281,11 @@ def print_scan_report(scan: dict):
             print(f"    {i}. {rec}")
         print()
 
+
 # ---------------------------------------------------------------------------
 # Init
 # ---------------------------------------------------------------------------
+
 
 def init_ouro(project_path: str):
     """Initialize .ouro/ directory with initial state."""
@@ -256,7 +322,9 @@ def init_ouro(project_path: str):
     results_path = os.path.join(project_path, RESULTS_FILE)
     if not os.path.exists(results_path):
         with open(results_path, "w") as f:
-            f.write("phase\tverdict\tbound_violations\ttest_pass_rate\tscope_deviation\tnotes\n")
+            f.write(
+                "phase\tverdict\tbound_violations\ttest_pass_rate\tscope_deviation\tnotes\n"
+            )
 
     print(f"Ouro initialized at {ouro_path}")
     print(f"  State:   {state_path}")
@@ -270,6 +338,7 @@ def init_ouro(project_path: str):
     else:
         print("BOUND detected. Ready to start the Ouro Loop.")
 
+
 # ---------------------------------------------------------------------------
 # Templates
 # ---------------------------------------------------------------------------
@@ -279,6 +348,7 @@ TEMPLATE_MAP = {
     "phase": "phase-plan.md.template",
     "verify": "verify-checklist.md.template",
 }
+
 
 def install_template(template_type: str, project_path: str):
     """Copy a template to the project directory."""
@@ -306,6 +376,7 @@ def install_template(template_type: str, project_path: str):
     print(f"Template installed: {dst}")
     print(f"  Edit this file to define your project's {template_type} configuration.")
 
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -318,20 +389,27 @@ if __name__ == "__main__":
 
     # scan
     scan_parser = subparsers.add_parser("scan", help="Scan project structure")
-    scan_parser.add_argument("path", nargs="?", default=".",
-                             help="Project directory to scan (default: current dir)")
+    scan_parser.add_argument(
+        "path",
+        nargs="?",
+        default=".",
+        help="Project directory to scan (default: current dir)",
+    )
 
     # init
     init_parser = subparsers.add_parser("init", help="Initialize .ouro/ directory")
-    init_parser.add_argument("path", nargs="?", default=".",
-                             help="Project directory (default: current dir)")
+    init_parser.add_argument(
+        "path", nargs="?", default=".", help="Project directory (default: current dir)"
+    )
 
     # template
     tmpl_parser = subparsers.add_parser("template", help="Install a template")
-    tmpl_parser.add_argument("type", choices=TEMPLATE_MAP.keys(),
-                             help="Template type to install")
-    tmpl_parser.add_argument("path", nargs="?", default=".",
-                             help="Project directory (default: current dir)")
+    tmpl_parser.add_argument(
+        "type", choices=TEMPLATE_MAP.keys(), help="Template type to install"
+    )
+    tmpl_parser.add_argument(
+        "path", nargs="?", default=".", help="Project directory (default: current dir)"
+    )
 
     args = parser.parse_args()
 

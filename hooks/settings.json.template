@@ -25,6 +25,11 @@
             "type": "command",
             "command": "$OURO_LOOP_DIR/hooks/root-cause-tracker.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$OURO_LOOP_DIR/hooks/momentum-gate.sh",
+            "timeout": 5
           }
         ]
       }
