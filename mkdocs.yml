@@ -54,6 +54,7 @@ nav:
     - Overview: concepts.md
   - Guides:
     - Quick Start: guides/quick-start.md
+    - Sentinel (24/7 Review): guides/sentinel.md
     - Claude Code Integration: guides/claude-code.md
     - Cursor Integration: guides/cursor.md
   - Examples:

@@ -16,7 +16,7 @@ Ouro Loop solves this with **Precision Autonomy through Absolute Constraint**. D
 |---|---|
 | **What it does** | Let AI agents code overnight without breaking things |
 | **How it works** | Define boundaries (BOUND) → AI loops: Build → Verify → Self-Fix |
-| **What you get** | `program.md` (method) + `framework.py` (runtime) + 4 hooks (enforcement) |
+| **What you get** | `program.md` (method) + `framework.py` (runtime) + `sentinel.py` (24/7 review) + 5 hooks (enforcement) |
 | **Requirements** | Python 3.10+, Git, any AI agent. Zero dependencies. |
 
 ---
