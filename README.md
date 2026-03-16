@@ -8,7 +8,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/ouro-loop.svg)](https://pypi.org/project/ouro-loop/)
 [![Python >=3.10](https://img.shields.io/badge/python->=3.10-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/VictorVVedtion/ouro-loop/actions/workflows/test.yml/badge.svg)](https://github.com/VictorVVedtion/ouro-loop/actions/workflows/test.yml)
-[![Tests: 499](https://img.shields.io/badge/tests-499_passed-brightgreen.svg)]()
+[![Tests: 499](https://img.shields.io/badge/tests-507_passed-brightgreen.svg)]()
 [![Status: Experimental](https://img.shields.io/badge/status-experimental-orange.svg)]()
 
 ## What is Ouro Loop?
