@@ -8,7 +8,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/ouro-loop.svg)](https://pypi.org/project/ouro-loop/)
 [![Python >=3.10](https://img.shields.io/badge/python->=3.10-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/VictorVVedtion/ouro-loop/actions/workflows/test.yml/badge.svg)](https://github.com/VictorVVedtion/ouro-loop/actions/workflows/test.yml)
-[![Tests: 415](https://img.shields.io/badge/tests-415_passed-brightgreen.svg)]()
+[![Tests: 499](https://img.shields.io/badge/tests-499_passed-brightgreen.svg)]()
 [![Status: Experimental](https://img.shields.io/badge/status-experimental-orange.svg)]()
 
 ## What is Ouro Loop?
@@ -19,7 +19,7 @@
 |---|---|
 | **What it does** | Let AI agents code overnight without breaking things |
 | **How it works** | Define boundaries (BOUND) → AI loops: Build → Verify → Self-Fix |
-| **What you get** | `program.md` (method) + `framework.py` (runtime) + 5 hooks (enforcement) + reflective log |
+| **What you get** | `program.md` (method) + `framework.py` (runtime) + `sentinel.py` (24/7 review) + 5 hooks (enforcement) |
 | **Requirements** | Python 3.10+, Git, any AI agent. Zero dependencies. `pip install ouro-loop` |
 
 ### Is Ouro Loop for you?
@@ -366,9 +366,10 @@ modules/
   verify.md           Stage 4: three-layer verification gates
   loop.md             Stage 5: feedback closure
   remediation.md      autonomous remediation playbook
-templates/            starter templates for CLAUDE.md, phase plans, checklists
-examples/             real-world BOUND definitions from four project types
-tests/               415 tests covering all runtime logic
+sentinel.py           24/7 autonomous code review module (partition scan, runner, dashboard)
+ouro_templates/       distributable templates for CLAUDE.md, phase plans, sentinel
+examples/             real-world BOUND definitions from five project types
+tests/               507 tests covering all runtime logic
 ```
 
 ## Design Choices
@@ -401,6 +402,57 @@ Ouro Loop is designed for any scenario where you need an **AI agent to work auto
 - **Continuous integration with AI agents** — Plug Ouro Loop into your CI/CD pipeline to let agents handle build failures, test regressions, and dependency updates autonomously.
 - **Multi-phase feature development** — Break complex features into severity-ordered phases. The agent handles CRITICAL changes first, then HIGH, then MEDIUM.
 - **Production-safe AI coding** — For financial systems, blockchain infrastructure, medical software, and any domain where "move fast and break things" is unacceptable.
+
+## Ouro Sentinel — 24/7 Autonomous Code Review
+
+Sentinel is a built-in module that runs continuous, unattended code review loops on any project.
+
+### Quick Start
+
+```bash
+pip install ouro-loop
+
+cd your-project/
+ouro-sentinel init .       # Scan → detect commands → generate partitions + config
+ouro-sentinel install .    # Generate runner + dashboard scripts
+make sentinel-start        # Start the 24/7 review loop
+make sentinel-dashboard    # Watch live progress
+```
+
+### What `init` Does
+
+1. **Scans** your project (languages, file count, LOC)
+2. **Detects** build/test/lint commands (Go, Rust, Node, Python, Java, Ruby, C++)
+3. **Generates partitions** — directories scored by risk (DANGER ZONE overlap → high)
+4. **Renders** a Sentinel-specific `CLAUDE.md` with your BOUND rules inherited
+5. **Creates** `.ouro/sentinel/` with state, config, empty findings log
+
+### What the Runner Does
+
+The runner (`sentinel-runner.sh`) is a bash daemon that:
+- Launches Claude Code sessions in a loop with `--permission-mode bypassPermissions`
+- Each session: reads state → picks highest-priority partition → scans → records findings → updates state
+- Handles crashes: cleans up worktrees, validates state, backs up, restarts
+- Rotates logs at 10MB, manages PID files, responds to SIGTERM/SIGINT
+
+### Prerequisites
+
+- **Claude Code CLI** (`claude`) must be in PATH — [install guide](https://claude.ai/claude-code)
+- **Git** — sentinel uses git history for activity scoring and worktree-based fixes
+- **Security note**: the runner uses `--permission-mode bypassPermissions` for unattended operation. Only run in trusted environments.
+
+### Commands
+
+```bash
+ouro-sentinel init <path>        # Initialize sentinel for a project
+ouro-sentinel partition <path>   # Regenerate partitions (after code changes)
+ouro-sentinel status <path>      # Show iteration count, findings, coverage
+ouro-sentinel install <path>     # Install runner + dashboard + Makefile targets
+```
+
+### Example
+
+See `examples/sentinel-review/` for a complete Python project example with config.
 
 ## Works With
 
