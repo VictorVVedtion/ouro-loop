@@ -932,7 +932,7 @@ class TestCheckBound(unittest.TestCase):
 
     def test_template_content_detected(self):
         # Install-as-is template has [PROJECT_NAME] etc.
-        src = os.path.join(PROJECT_ROOT, "templates", "CLAUDE.md.template")
+        src = os.path.join(PROJECT_ROOT, "ouro_templates", "CLAUDE.md.template")
         dst = os.path.join(self.tmp, "CLAUDE.md")
         shutil.copy2(src, dst)
         # Should print template warning without crashing

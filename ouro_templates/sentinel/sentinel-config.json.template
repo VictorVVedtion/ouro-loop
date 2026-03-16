@@ -1,0 +1,27 @@
+{
+  "version": "0.1.0",
+  "project_name": "auto-detected",
+  "commands": {
+    "build": null,
+    "test": null,
+    "lint": null
+  },
+  "review": {
+    "max_fix_attempts": 3,
+    "blast_radius_limit": 3,
+    "confidence_threshold": 0.8,
+    "fix_confidence_threshold": 0.9,
+    "auto_pr": false,
+    "pr_prefix": "sentinel/"
+  },
+  "runner": {
+    "model": "claude-opus-4-6",
+    "max_turns": 200,
+    "session_timeout_minutes": 120,
+    "cooldown_seconds": 30
+  },
+  "partitioning": {
+    "strategy": "directory",
+    "criticality_overrides": {}
+  }
+}

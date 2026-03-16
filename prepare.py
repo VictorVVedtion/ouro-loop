@@ -28,10 +28,24 @@ from framework import (
     parse_claude_md,
 )
 
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+def _find_templates_dir():
+    """Locate templates: ouro_templates package first, then adjacent dir."""
+    try:
+        import ouro_templates
+
+        pkg_dir = os.path.dirname(ouro_templates.__file__)
+        if os.path.isdir(pkg_dir):
+            return pkg_dir
+    except ImportError:
+        pass
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "ouro_templates")
+
+
+TEMPLATES_DIR = _find_templates_dir()
 MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules")
 
 # File extensions to language mapping

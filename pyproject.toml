@@ -1,6 +1,6 @@
 [project]
 name = "ouro-loop"
-version = "0.2.0"
+version = "0.3.0"
 description = "Give AI coding agents (Claude Code, Cursor, Aider, Codex) a structured autonomous loop with guardrails — boundaries, verification gates, self-healing, and autonomous remediation. Zero dependencies."
 readme = "README.md"
 license = "MIT"
@@ -28,12 +28,14 @@ Issues = "https://github.com/VictorVVedtion/ouro-loop/issues"
 
 [project.scripts]
 ouro = "framework:main"
+ouro-sentinel = "sentinel:main"
 
 [tool.setuptools]
-py-modules = ["framework", "prepare"]
+py-modules = ["framework", "prepare", "sentinel"]
+packages = ["ouro_templates"]
 
 [tool.setuptools.package-data]
-"*" = ["*.md", "*.sh", "*.json"]
+"ouro_templates" = ["**/*.template"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -24,13 +24,13 @@ jobs:
         run: pip install pytest pytest-cov "ruff>=0.8,<1.0" bandit
 
       - name: Ruff lint + format
-        run: ruff check framework.py prepare.py && ruff format --check framework.py prepare.py
+        run: ruff check framework.py prepare.py sentinel.py && ruff format --check framework.py prepare.py sentinel.py
 
       - name: Run tests with coverage
-        run: python -m pytest tests/ -v --cov=framework --cov=prepare --cov-report=term-missing --cov-fail-under=70
+        run: python -m pytest tests/ -v --cov=framework --cov=prepare --cov=sentinel --cov-report=term-missing --cov-fail-under=70
 
       - name: Security scan
-        run: bandit -r framework.py prepare.py -ll
+        run: bandit -r framework.py prepare.py sentinel.py -ll
 
       - name: ShellCheck
         run: shellcheck hooks/*.sh

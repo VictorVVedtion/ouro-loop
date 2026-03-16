@@ -1,0 +1,23 @@
+# --- Ouro Sentinel targets ---
+# Add these to your project Makefile
+
+sentinel-start:
+	@{{SENTINEL_DIR}}/sentinel-runner.sh start
+
+sentinel-stop:
+	@{{SENTINEL_DIR}}/sentinel-runner.sh stop
+
+sentinel-restart:
+	@{{SENTINEL_DIR}}/sentinel-runner.sh restart
+
+sentinel-dashboard:
+	@{{SENTINEL_DIR}}/sentinel-dashboard.sh
+
+sentinel-watch:
+	@{{SENTINEL_DIR}}/sentinel-dashboard.sh --watch
+
+sentinel-status:
+	@ouro-sentinel status .
+
+sentinel-partition:
+	@ouro-sentinel partition .
